@@ -1,0 +1,1229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RTT Start</title>
+
+  <!-- Tailwind CSS via CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- jQuery (CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.4/jquery.min.js"></script>
+
+  <!-- Agora SDK -->
+  <script src="https://download.agora.io/sdk/release/AgoraRTC_N.js"></script>
+
+  <!-- Protobuf (CDN) -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/protobufjs/6.11.3/protobuf.min.js"></script>
+
+  <!-- Update Protobuf references -->
+  <script src="proto/protobuf.min.js"></script>
+  <script src="proto/index.js"></script>
+
+  <style>
+    /* Modal styles */
+    dialog {
+      background: #1f2937;
+      color: white;
+      padding: 2.5rem;
+      border-radius: 1rem;
+      border: 1px solid #374151;
+      max-width: 90vw;
+      width: 800px;
+      margin: 2rem auto;
+      overflow-y: auto;
+      max-height: 90vh;
+    }
+    
+    dialog::backdrop {
+      background: rgba(0, 0, 0, 0.8);
+    }
+
+    dialog h2 {
+      padding: 0 1rem;  /* Add padding to title */
+    }
+
+    /* Video container styles */
+    .video-container {
+      position: relative;
+      aspect-ratio: 16/9;
+      background: #000;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      width: 100%;
+      max-width: 640px; /* Limit width of local video */
+      margin: 0 auto 1rem;
+    }
+
+    .video-container video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .transcription-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 1rem;
+      color: white;
+    }
+
+    /* Remote video grid - limit to 4 columns */
+    #remote-playerlist {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 1rem;
+      width: 100%;
+    }
+
+    @media (min-width: 1024px) {
+      #remote-playerlist {
+        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+        max-width: 100%;
+      }
+    }
+
+    .remote-video {
+      position: relative;
+      aspect-ratio: 16/9;
+      background: #000;
+      border-radius: 0.5rem;
+      overflow: hidden;
+      width: 100%;
+    }
+
+    .remote-video video {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .remote-video .transcription-overlay {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: rgba(0, 0, 0, 0.7);
+      padding: 1rem;
+      color: white;
+      z-index: 10;
+    }
+
+    /* Popup styles */
+    .popupHidden {
+      display: none;
+    }
+
+    .popupShow {
+      position: fixed;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #2d2d2d;
+      color: white;
+      padding: 1rem 1.5rem;
+      border-radius: 0.5rem;
+      margin-bottom: 0.5rem;
+      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+      animation: fadeInOut 0.3s ease-in-out;
+      z-index: 10000;
+    }
+
+    @keyframes fadeInOut {
+      0% { opacity: 0; transform: translate(-50%, 20px); }
+      100% { opacity: 1; transform: translate(-50%, 0); }
+    }
+
+    /* Input styles */
+    input[type="text"] {
+      width: 100%;
+      padding: 0.75rem 1rem;
+      background: #374151 !important;
+      border: 1px solid #4B5563;
+      color: white !important;
+      border-radius: 0.5rem;
+      margin-top: 0.5rem;
+    }
+
+    input[type="text"]::placeholder {
+      color: #9CA3AF;
+    }
+
+    /* Modal section spacing */
+    .space-y-6 {
+      padding: 0 1rem;
+    }
+
+    .border-t {
+      border-color: #4B5563;
+      margin-top: 2rem;
+      padding-top: 2rem;
+    }
+
+    /* Modal labels */
+    label {
+      font-size: 1rem;
+      font-weight: 500;
+      color: #E5E7EB;
+    }
+
+    /* Modal buttons */
+    dialog button {
+      min-width: 100px;
+      padding: 0.75rem 1.5rem;
+    }
+
+    /* Update modal footer */
+    dialog .flex.justify-end {
+      margin: 2rem 0 0 0;  /* Remove negative margins */
+      padding: 1.5rem;
+      background: #161e2e;
+      border-top: 1px solid #374151;
+      width: 100%;
+    }
+
+    /* Content container inside dialog */
+    dialog > div:not(.flex) {
+      padding: 0 1rem;
+      margin-bottom: 2rem;
+    }
+
+    .translation-pair {
+      background: rgba(0, 0, 0, 0.2);
+      margin-bottom: 1rem;
+    }
+
+    .translation-pair:last-child {
+      margin-bottom: 0;
+    }
+
+    .target-languages {
+      border-top: 1px solid rgba(75, 85, 99, 0.4);
+      padding-top: 1rem;
+      margin-top: 1rem;
+    }
+
+    /* Fix grid alignment for translation pairs */
+    #translation-pairs {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* Remove number input spinners */
+    input[type="number"]::-webkit-inner-spin-button,
+    input[type="number"]::-webkit-outer-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    input[type="number"] {
+      -moz-appearance: textfield;
+    }
+
+    /* Fix grid alignment */
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    /* Remove any empty remote video containers */
+    .remote-video:empty {
+      display: none;
+    }
+
+    /* Update video container styles */
+    .video-wrapper {
+      margin-bottom: 1rem;
+    }
+
+    .language-selector {
+      margin-bottom: 0.5rem;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    /* Remove empty containers */
+    .remote-video:empty,
+    #remote-playerlist:empty,
+    #remote-playerlist > div:empty,
+    .video-wrapper:empty {
+      display: none !important;
+    }
+  </style>
+</head>
+
+<body class="bg-gray-900 text-white min-h-screen p-8">
+  <!-- Add popup section at the top of body -->
+  <div id="popup-section" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50"></div>
+
+  <div class="max-w-7xl mx-auto">
+    <div class="flex justify-between items-center mb-8">
+      <h1 class="text-2xl font-bold">Real-Time Transcription</h1>
+      
+      <div class="flex gap-4">
+        <button 
+          onclick="document.getElementById('connectionModal').showModal()"
+          class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-semibold"
+        >
+          Connection Settings
+        </button>
+        
+        <button 
+          onclick="document.getElementById('sttModal').showModal()"
+          class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg font-semibold"
+        >
+          STT Settings
+        </button>
+        </div>
+        </div>
+
+    <!-- Update local video template -->
+    <div class="video-wrapper">
+      <div class="language-selector">
+        <select id="translation-lang-local" 
+                class="bg-gray-800 rounded px-2 py-1 text-sm" 
+                onchange="updateTranslationView('local')">
+        </select>
+        </div>
+      <div class="video-container">
+        <div id="local-player" class="w-full h-full"></div>
+        <div class="transcription-overlay">
+          <div id="transcription-local" class="text-xl mb-2"></div>
+          <div id="translation-local" class="text-gray-300"></div>
+        </div>
+        </div>
+      </div>
+
+    <!-- Remote videos -->
+    <div id="remote-playerlist" class="remote-grid"></div>
+
+    <!-- Control buttons -->
+    <div class="flex gap-4 mt-8">
+      <button id="join" class="bg-blue-600 hover:bg-blue-700 px-6 py-2 rounded-lg font-semibold">
+          Join
+        </button>
+      <button id="leave" class="bg-red-600 hover:bg-red-700 px-6 py-2 rounded-lg font-semibold opacity-50 cursor-not-allowed" disabled>
+          Leave
+        </button>
+      <button id="start-trans" class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg font-semibold opacity-50 cursor-not-allowed" disabled>
+          Start RTT
+        </button>
+      <button id="stop-trans" class="bg-red-600 hover:bg-red-700 px-6 py-2 rounded-lg font-semibold opacity-50 cursor-not-allowed" disabled>
+          Stop RTT
+        </button>
+    </div>
+
+    <!-- Connection Settings Modal -->
+    <dialog id="connectionModal">
+      <h2 class="text-xl font-bold mb-6">Connection Settings</h2>
+      
+      <div class="space-y-4">
+        <div>
+          <label class="block mb-2">App ID</label>
+          <input id="appid" type="text" class="w-full bg-gray-800 rounded p-2" placeholder="Enter App ID">
+          </div>
+        
+        <div>
+          <label class="block mb-2">Channel Name</label>
+          <input id="channel" type="text" class="w-full bg-gray-800 rounded p-2" placeholder="Enter channel name">
+        </div>
+
+        <div>
+          <label class="block mb-2">User ID (optional)</label>
+          <input id="uid" type="text" class="w-full bg-gray-800 rounded p-2" placeholder="Enter user ID">
+        </div>
+      </div>
+
+      <div class="flex justify-end gap-4 mt-6">
+        <button
+          onclick="this.closest('dialog').close()"
+          class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded"
+        >
+          Cancel
+        </button>
+        <button 
+          onclick="saveConnectionSettings()"
+          class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+        >
+          Save
+        </button>
+      </div>
+    </dialog>
+
+    <!-- STT Settings Modal -->
+    <dialog id="sttModal">
+      <h2 class="text-xl font-bold mb-8">STT Settings</h2>
+      
+      <div class="space-y-6">
+        <!-- Authentication -->
+        <div>
+          <label class="block mb-2">Customer Key</label>
+          <input id="key" type="text" class="w-full bg-gray-800 rounded p-2" placeholder="Enter customer key">
+        </div>
+        
+        <div>
+          <label class="block mb-2">Customer Secret</label>
+          <input id="secret" type="text" class="w-full bg-gray-800 rounded p-2" placeholder="Enter customer secret">
+      </div>
+
+        <!-- Languages -->
+        <div>
+          <label class="block mb-2">Speaking Languages</label>
+          <div id="speaking-languages" class="space-y-2">
+            <div class="flex gap-2">
+              <input type="text" class="flex-1 bg-gray-800 rounded p-2" value="en-US">
+              <button onclick="addLanguageInput('speaking-languages')" class="bg-blue-600 px-3 rounded">+</button>
+        </div>
+        </div>
+        </div>
+
+        <!-- Translation -->
+        <div>
+          <label class="block mb-2">Translation Settings</label>
+          <p class="text-gray-400 mb-4">Note: To enable translation, specify at least one source language and its target language(s).</p>
+          
+          <div id="translation-pairs" class="space-y-4">
+            <div class="translation-pair border border-gray-700 p-4 rounded">
+              <div class="mb-4">
+                <div class="flex justify-between items-center mb-2">
+                  <label class="block">Source Language</label>
+                  <button onclick="this.closest('.translation-pair').remove()" class="text-red-500 text-sm">Remove Pair</button>
+        </div>
+                <input type="text" class="source-lang w-full bg-gray-800 rounded p-2" placeholder="e.g., en-US">
+              </div>
+              <div class="target-languages space-y-2">
+                <label class="block mb-2">Target Languages</label>
+                <div class="flex gap-2">
+                  <input type="text" class="flex-1 bg-gray-800 rounded p-2" placeholder="Target language (e.g., es-ES)">
+                  <button onclick="addTargetLanguage(this)" class="bg-blue-600 px-3 rounded">+</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button onclick="addTranslationPair()" class="mt-4 bg-blue-600 px-4 py-2 rounded">Add Translation Pair</button>
+      </div>
+
+        <!-- Bot Configuration -->
+        <div class="border-t border-gray-700 pt-4">
+          <h3 class="font-semibold mb-4">Bot Configuration</h3>
+          <div class="settings-grid">
+        <div>
+              <label class="block mb-2">Pull Bot UID</label>
+              <input id="puller-uid" type="text" class="w-full bg-gray-800 rounded p-2" value="666">
+        </div>
+        <div>
+              <label class="block mb-2">Pull Bot Token (Optional)</label>
+              <input id="puller-token" type="text" class="w-full bg-gray-800 rounded p-2" placeholder="Enter pull bot token">
+        </div>
+            <div>
+              <label class="block mb-2">Push Bot UID</label>
+              <input id="pusher-uid" type="text" class="w-full bg-gray-800 rounded p-2" value="66666">
+      </div>
+        <div>
+              <label class="block mb-2">Push Bot Token (Optional)</label>
+              <input id="pusher-token" type="text" class="w-full bg-gray-800 rounded p-2" placeholder="Enter push bot token">
+        </div>
+          </div>
+        </div>
+
+        <!-- Encryption Settings -->
+        <div class="border-t border-gray-700 pt-4">
+          <h3 class="font-semibold mb-4">Encryption Settings</h3>
+          <div class="settings-grid">
+        <div>
+              <label class="block mb-2">Decryption Mode</label>
+              <input id="decryption-mode" type="text" class="w-full bg-gray-800 rounded p-2" placeholder="Enter mode (optional)">
+        </div>
+        <div>
+              <label class="block mb-2">Secret</label>
+              <input id="encryption-secret" type="text" class="w-full bg-gray-800 rounded p-2" placeholder="Enter secret (optional)">
+        </div>
+        <div>
+              <label class="block mb-2">Salt</label>
+              <input id="encryption-salt" type="text" class="w-full bg-gray-800 rounded p-2" placeholder="Enter salt (optional)">
+            </div>
+        </div>
+      </div>
+
+        <!-- Storage Configuration -->
+        <div class="border-t border-gray-700 pt-4">
+          <h3 class="font-semibold mb-4">Storage Configuration</h3>
+          <div class="settings-grid">
+        <div>
+              <label class="block mb-2">S3 Access Key</label>
+              <input id="s3-access-key" type="text" class="w-full bg-gray-800 rounded p-2" placeholder="Enter access key">
+        </div>
+        <div>
+              <label class="block mb-2">S3 Secret Key</label>
+              <input id="s3-secret-key" type="text" class="w-full bg-gray-800 rounded p-2" placeholder="Enter secret key">
+        </div>
+            <div>
+              <label class="block mb-2">S3 Bucket</label>
+              <input id="s3-bucket" type="text" class="w-full bg-gray-800 rounded p-2" placeholder="Enter bucket name">
+      </div>
+            <div>
+              <label class="block mb-2">S3 Region</label>
+              <input id="s3-region" type="text" class="w-full bg-gray-800 rounded p-2" placeholder="Enter region">
+      </div>
+            <div>
+              <label class="block mb-2">S3 Vendor</label>
+              <input id="s3-vendor" type="text" class="w-full bg-gray-800 rounded p-2" placeholder="Enter vendor">
+    </div>
+            <div>
+              <label class="block mb-2">File Name Prefix</label>
+              <input id="s3-fileNamePrefix" type="text" class="w-full bg-gray-800 rounded p-2" placeholder="Enter prefix">
+        </div>
+        </div>
+      </div>
+    </div>
+
+      <div class="flex justify-end gap-4 mt-8">
+        <button 
+          onclick="this.closest('dialog').close()"
+          class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded"
+        >
+          Cancel
+        </button>
+        <button 
+          onclick="saveSTTSettings()"
+          class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+        >
+          Save
+        </button>
+      </div>
+    </dialog>
+  </div>
+
+<script>
+// Initialize variables
+var client;
+var options = {
+  appid: null,
+  channel: null,
+  uid: null,
+  token: null
+};
+
+let transcribeIndex = 0;
+let translateIndex = 0;
+let localTrack = null;
+var localAudioTrack = null;
+
+// Add these variables
+let taskId = '';
+let tokenName = '';
+const gatewayAddress = "https://api.agora.io";
+
+// Keep track of available languages for each user
+const userLanguages = new Map(); // uid -> { speaking: string, translations: Set<string> }
+
+// Initialize AgoraRTC client
+if (!client) {
+  client = AgoraRTC.createClient({
+    mode: "live",
+    codec: "vp8",
+    role: "host"
+  });
+}
+
+// Load saved settings on page load
+$(document).ready(function() {
+  updateButtonStates('initial');
+  loadSavedSettings();
+});
+
+function loadSavedSettings() {
+  // Load connection settings
+  const savedConnection = JSON.parse(localStorage.getItem('connectionSettings') || '{}');
+  if (savedConnection.appid) {
+    $("#appid").val(savedConnection.appid);
+    options.appid = savedConnection.appid;
+  }
+  if (savedConnection.channel) {
+    $("#channel").val(savedConnection.channel);
+    options.channel = savedConnection.channel;
+  }
+
+  // Load STT settings
+  const savedSTT = JSON.parse(localStorage.getItem('sttSettings') || '{}');
+  if (savedSTT.key) $("#key").val(savedSTT.key);
+  if (savedSTT.secret) $("#secret").val(savedSTT.secret);
+  if (savedSTT.speakingLanguage) $("#speaking-language").val(savedSTT.speakingLanguage);
+  if (savedSTT.translationLanguage) $("#translation-language").val(savedSTT.translationLanguage);
+}
+
+// Save settings functions
+function saveConnectionSettings() {
+  options.appid = $("#appid").val();
+  options.channel = $("#channel").val();
+  options.uid = $("#uid").val();
+  
+  // Save to localStorage
+  localStorage.setItem('connectionSettings', JSON.stringify({
+    appid: options.appid,
+    channel: options.channel
+  }));
+  
+  document.getElementById('connectionModal').close();
+  showPopup("Connection settings saved");
+}
+
+function saveSTTSettings() {
+  // Save to localStorage
+  localStorage.setItem('sttSettings', JSON.stringify({
+    key: $("#key").val(),
+    secret: $("#secret").val(),
+    speakingLanguage: $("#speaking-language").val(),
+    translationLanguage: $("#translation-language").val()
+  }));
+  
+  document.getElementById('sttModal').close();
+  showPopup("STT settings saved");
+}
+
+// Get authorization
+function GetAuthorization() {
+  const customerKey = $("#key").val();
+  const customerSecret = $("#secret").val();
+  if (!customerKey || !customerSecret) {
+    showPopup("Please configure STT settings first");
+    return "";
+  }
+  return `Basic ${btoa(`${customerKey}:${customerSecret}`)}`;
+}
+
+// Acquire token
+async function acquireToken() {
+  const url = `${gatewayAddress}/v1/projects/${options.appid}/rtsc/speech-to-text/builderTokens`;
+  const data = { instanceId: options.channel };
+  let res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": GetAuthorization()
+    },
+    body: JSON.stringify(data)
+  });
+  if (res.status == 200) {
+    res = await res.json();
+    return res;
+  } else {
+    throw new Error(`Failed to acquire token: ${res.status}`);
+  }
+}
+
+// Update the subscribe function to include transcription overlay
+async function subscribe(user, mediaType) {
+  const uid = user.uid;
+  await client.subscribe(user, mediaType);
+  console.log("subscribe success");
+  if (mediaType === "video") {
+    const player = $(`
+      <div class="remote-video">
+        <div id="player-${uid}" class="w-full h-full"></div>
+        <div class="transcription-overlay">
+          <div id="transcription-${uid}" class="text-xl mb-2"></div>
+          <div id="translation-${uid}" class="text-gray-300"></div>
+        </div>
+      </div>
+    `);
+    $("#remote-playerlist").append(player);
+    user.videoTrack.play(`player-${uid}`);
+  }
+  if (mediaType === "audio") {
+    user.audioTrack.play();
+  }
+}
+
+// Update stream message handler to use language from translation message
+client.on("stream-message", function(uid, data) {
+  try {
+    const Text = $protobufRoot.lookup("agora.audio2text.Text");
+    const msg = Text.decode(data);
+    console.log("Received message:", msg);
+    
+    if (msg.data_type === "transcribe" && msg.words && msg.words.length) {
+      const text = msg.words.map(word => word.text).join("");
+      $(`#transcription-${msg.uid}`).text(text);
+      addTranscribeItem(msg.uid, text);
+    } 
+    else if (msg.data_type === "translate" && msg.trans && msg.trans.length) {
+      // Get currently selected language
+      const [selectedSource, selectedTarget] = ($(`#translation-lang-${msg.uid}`).val() || '').split(':');
+      
+      // Find translation that matches the selected language
+      const translation = msg.trans.find(t => {
+        const sourceLang = t.source || msg.source;
+        return (!selectedSource || sourceLang === selectedSource) && 
+               (!selectedTarget || t.language === selectedTarget);
+      }) || msg.trans[0];
+
+      if (translation) {
+        const text = translation.texts.join("");
+        $(`#translation-${msg.uid}`).text(text);
+        addTranslateItem(msg.uid, text);
+      }
+    }
+  } catch (error) {
+    console.error("Error handling stream message:", error);
+  }
+});
+
+// Update remote video handling
+client.on("user-published", async function(user, mediaType) {
+  await client.subscribe(user, mediaType);
+  
+  if (mediaType === "video") {
+    // Check if container already exists and remove any duplicates
+    const existingContainers = $(`[id^="video-wrapper-${user.uid}"]`);
+    if (existingContainers.length) {
+      // Keep only the first container and remove others
+      existingContainers.slice(1).remove();
+      // If first container already has video playing, just return
+      if ($(`#player-${user.uid} video`).length) {
+        return;
+      }
+    }
+
+    // Remove any orphaned player divs
+    $(`#player-${user.uid}`).not(`#video-wrapper-${user.uid} #player-${user.uid}`).remove();
+
+    const playerContainer = $(`
+      <div id="video-wrapper-${user.uid}" class="video-wrapper">
+        <div class="language-selector">
+          <select id="translation-lang-${user.uid}" 
+                  class="bg-gray-800 rounded px-2 py-1 text-sm" 
+                  onchange="updateTranslationView('${user.uid}')">
+          </select>
+        </div>
+        <div class="remote-video">
+          <div id="player-${user.uid}" class="w-full h-full"></div>
+          <div class="transcription-overlay">
+            <div id="transcription-${user.uid}" class="text-xl mb-2"></div>
+            <div id="translation-${user.uid}" class="text-gray-300"></div>
+          </div>
+        </div>
+      </div>
+    `);
+
+    // Only append if container doesn't exist
+    if (!$(`#video-wrapper-${user.uid}`).length) {
+      $("#remote-playerlist").append(playerContainer);
+    }
+    
+    user.videoTrack.play(`player-${user.uid}`);
+    updateLanguageSelector(user.uid);
+  }
+  
+  if (mediaType === "audio") {
+    user.audioTrack.play();
+  }
+});
+
+// Update language selector creation
+function updateLanguageSelector(uid) {
+  const selector = $(`#translation-lang-${uid}`);
+  const currentSelection = selector.val();
+  selector.empty();
+
+  translationSettings.pairs.forEach(pair => {
+    const group = $(`<optgroup label="${pair.source}">`);
+    pair.targets.forEach(target => {
+      const option = $(`<option value="${pair.source}:${target}">
+        ${pair.source} → ${target}
+      </option>`);
+      group.append(option);
+    });
+    selector.append(group);
+  });
+
+  // Restore previous selection or select first option
+  if (currentSelection && selector.find(`option[value="${currentSelection}"]`).length) {
+    selector.val(currentSelection);
+  } else {
+    selector.find('option:first').prop('selected', true);
+  }
+}
+
+// Update startTranscription to handle multiple languages
+async function startTranscription() {
+  const authorization = GetAuthorization();
+  if (!authorization) {
+    throw new Error("key or secret is empty");
+  }
+
+  const data = await acquireToken();
+  tokenName = data.tokenName;
+
+  const url = `${gatewayAddress}/v1/projects/${options.appid}/rtsc/speech-to-text/tasks?builderToken=${tokenName}`;
+  
+  // Build new request body format
+  const body = {
+    languages: Array.from(document.querySelectorAll('#speaking-languages input'))
+      .map(input => input.value)
+      .filter(value => value.trim() !== ''), // Filter out empty values
+    maxIdleTime: 50,
+    rtcConfig: {
+      channelName: options.channel,
+      subBotUid: $("#puller-uid").val(),
+      pubBotUid: $("#pusher-uid").val()
+    }
+  };
+
+  // Add optional tokens
+  const pullToken = $("#puller-token").val();
+  const pushToken = $("#pusher-token").val();
+  if (pullToken) body.rtcConfig.subBotToken = pullToken;
+  if (pushToken) body.rtcConfig.pubBotToken = pushToken;
+
+  // Add encryption if specified
+  const decryptionMode = $("#decryption-mode").val();
+  const secret = $("#encryption-secret").val();
+  const salt = $("#encryption-salt").val();
+  if (decryptionMode) body.rtcConfig.cryptionMode = parseInt(decryptionMode);
+  if (secret) body.rtcConfig.secret = secret;
+  if (salt) body.rtcConfig.salt = salt;
+
+  // Add translation config
+  const translationPairs = Array.from(document.querySelectorAll('.translation-pair')).map(pair => {
+    const source = pair.querySelector('.source-lang').value;
+    const targets = Array.from(pair.querySelectorAll('.target-languages input')).map(input => input.value);
+    return {
+      source,
+      target: targets
+    };
+  }).filter(pair => pair.source && pair.target.length > 0);
+
+  if (translationPairs.length > 0) {
+    body.translateConfig = {
+      forceTranslateInterval: 5,
+      languages: translationPairs
+    };
+  }
+
+  // Add optional storage config
+  const s3Bucket = $("#s3-bucket").val();
+  if (s3Bucket) {
+    body.captionConfig = {
+      sliceDuration: 60,
+      storage: {
+        bucket: s3Bucket
+      }
+    };
+
+    // Add optional storage credentials
+    const s3AccessKey = $("#s3-access-key").val();
+    const s3SecretKey = $("#s3-secret-key").val();
+    if (s3AccessKey && s3SecretKey) {
+      body.captionConfig.storage.accessKey = s3AccessKey;
+      body.captionConfig.storage.secretKey = s3SecretKey;
+    }
+
+    // Add optional storage configuration
+    const s3Vendor = $("#s3-vendor").val();
+    if (s3Vendor) {
+      body.captionConfig.storage.vendor = parseInt(s3Vendor);
+    }
+
+    const s3Region = $("#s3-region").val();
+    if (s3Region) {
+      body.captionConfig.storage.region = parseInt(s3Region);
+    }
+
+    const s3FileNamePrefix = $("#s3-fileNamePrefix").val();
+    if (s3FileNamePrefix) {
+      body.captionConfig.storage.fileNamePrefix = [s3FileNamePrefix];
+    }
+  }
+
+  console.log("Starting transcription with body:", body);
+
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": authorization
+    },
+    body: JSON.stringify(body)
+  });
+
+  const responseText = await res.text();
+  let responseData;
+  try {
+    responseData = JSON.parse(responseText);
+  } catch (e) {
+    responseData = { message: responseText };
+  }
+
+  if (!res.ok) {
+    if (res.status === 409 && responseData.taskId) {
+      taskId = responseData.taskId;
+      updateButtonStates('transcribing');
+      return { taskId };
+    }
+    throw new Error(responseData.message || `HTTP error ${res.status}`);
+  }
+
+  if (!responseData.taskId) {
+    throw new Error("No taskId received from server");
+  }
+
+  taskId = responseData.taskId;
+  updateButtonStates('transcribing');
+  return responseData;
+}
+
+// Update stopTranscription to handle button states
+async function stopTranscription() {
+  if (!taskId) return;
+  
+  const url = `${gatewayAddress}/v1/projects/${options.appid}/rtsc/speech-to-text/tasks/${taskId}?builderToken=${tokenName}`;
+  
+  await fetch(url, {
+    method: 'DELETE',
+    headers: {
+      "Content-Type": "application/json",
+      "Authorization": GetAuthorization()
+    }
+  });
+  
+  taskId = null;
+  updateButtonStates('joined');
+  
+  // Clear all transcriptions
+  $("[id^=transcription-]").text("");
+  $("[id^=translation-]").text("");
+}
+
+// Update button state management
+function updateButtonStates(state) {
+  switch(state) {
+    case 'initial':
+      $("#join").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
+      $("#leave").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+      $("#start-trans").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
+      $("#stop-trans").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+      break;
+    case 'joined':
+      $("#join").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+      $("#leave").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
+      $("#start-trans").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
+      $("#stop-trans").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+      break;
+    case 'transcribing':
+      $("#start-trans").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+      $("#stop-trans").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
+      break;
+  }
+}
+
+// Update join handler
+$("#join").click(async function() {
+  if (!options.appid || !options.channel) {
+    showPopup("Please configure connection settings first");
+    return;
+  }
+
+  try {
+    // Join and store the assigned UID
+    options.uid = await client.join(options.appid, options.channel, null, options.uid || null);
+    console.log("Joined with UID:", options.uid);
+    
+    // Create and publish both tracks
+    const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
+    localTrack = videoTrack;
+    localAudioTrack = audioTrack;
+    
+    await client.publish([audioTrack, videoTrack]);
+    
+    // Add local player with transcription overlay
+    $("#local-player").parent().append(`
+      <div class="transcription-overlay">
+        <div id="transcription-${options.uid}" class="text-xl mb-2"></div>
+        <div id="translation-${options.uid}" class="text-gray-300"></div>
+      </div>
+    `);
+    videoTrack.play("local-player");
+    
+    updateButtonStates('joined');
+    showPopup("Joined channel successfully");
+  } catch (error) {
+    console.error(error);
+    showPopup("Failed to join channel: " + error.message);
+  }
+});
+
+// Update leave handler
+$("#leave").click(async function() {
+  try {
+    if (localTrack) {
+      localTrack.stop();
+      localTrack.close();
+    }
+    if (localAudioTrack) {
+      localAudioTrack.stop();
+      localAudioTrack.close();
+    }
+    await client.leave();
+    $("#local-player").empty();
+    $("#remote-playerlist").empty();
+    
+    updateButtonStates('initial');
+    showPopup("Left channel successfully");
+  } catch (error) {
+    console.error(error);
+    showPopup("Failed to leave channel");
+  }
+});
+
+// Show popup notification
+var popups = 0;
+
+function showPopup(message) {
+  const newPopup = popups + 1;
+  console.log(`Popup count: ${newPopup}`);
+  const y = $(`<div id="popup-${newPopup}" class="popupHidden">${message}</div>`);
+  $("#popup-section").append(y);
+  const x = document.getElementById(`popup-${newPopup}`);
+  x.className = "popupShow";
+  const z = popups * 10;
+  $(`#popup-${newPopup}`).css("left", `${50 + z}%`);
+  popups++;
+  setTimeout(function() {
+    $(`#popup-${newPopup}`).remove();
+    popups--;
+  }, 3000);
+}
+
+// Update user-unpublished handler to be more thorough
+client.on("user-unpublished", function(user) {
+  // Remove all elements related to this user
+  $(`[id^="video-wrapper-${user.uid}"]`).remove();
+  $(`[id^="player-${user.uid}"]`).remove();
+});
+
+// Update the start-trans click handler
+$("#start-trans").click(async function() {
+  try {
+    if (!$("#key").val() || !$("#secret").val()) {
+      showPopup("Please configure STT settings first");
+      document.getElementById('sttModal').showModal();
+      return;
+    }
+
+    if (!options.appid || !options.channel) {
+      showPopup("Please configure connection settings first");
+      document.getElementById('connectionModal').showModal();
+      return;
+    }
+
+    $("#start-trans").prop('disabled', true);
+    await startTranscription();
+    showPopup("Started transcription");
+  } catch (error) {
+    console.error(error);
+    showPopup(error.message || "Failed to start transcription");
+    $("#start-trans").prop('disabled', false);
+  }
+});
+
+// Update the stop-trans click handler
+$("#stop-trans").click(async function() {
+  try {
+    $("#stop-trans").prop('disabled', true);
+    await stopTranscription();
+    $("#start-trans").prop('disabled', false);
+    showPopup("Stopped transcription");
+  } catch (error) {
+    console.error(error);
+    showPopup("Failed to stop transcription");
+    $("#stop-trans").prop('disabled', false);
+  }
+});
+
+// Add helper functions for transcription display
+function addTranscribeItem(uid, text) {
+  console.log("Adding transcription for uid:", uid, text);
+  const itemId = `transcribe-${uid}-${transcribeIndex}`;
+  
+  if ($(`#${itemId}`)[0]) {
+    $(`#${itemId} .msg`).html(text);
+  } else {
+    const $item = $(`
+      <div class="item" id="${itemId}">
+        <span class="uid">${uid}</span>:
+        <span class="msg">${text}</span>
+      </div>
+    `);
+    $("#stt-transcribe .content").prepend($item);
+  }
+  
+  // Update overlay for the specific user
+  $(`#transcription-${uid}`).text(text);
+}
+
+function addTranslateItem(uid, text) {
+  console.log("Adding translation for uid:", uid, text);
+  const itemId = `translate-${uid}-${translateIndex}`;
+  
+  if ($(`#${itemId}`)[0]) {
+    $(`#${itemId} .msg`).html(text);
+  } else {
+    const $item = $(`
+      <div class="item" id="${itemId}">
+        <span class="uid">${uid}</span>:
+        <span class="msg">${text}</span>
+      </div>
+    `);
+    $("#stt-translate .content").append($item);
+  }
+  
+  // Update overlay for the specific user
+  $(`#translation-${uid}`).text(text);
+}
+
+// Update speaking languages input
+function addLanguageInput(containerId) {
+  const container = document.getElementById(containerId);
+  if (container.children.length >= 2) {
+    showPopup("Maximum 2 speaking languages allowed");
+    return;
+  }
+  
+  const div = document.createElement('div');
+  div.className = 'flex gap-2';
+  div.innerHTML = `
+    <input type="text" class="flex-1 bg-gray-800 rounded p-2" placeholder="Enter language code">
+    <button onclick="this.parentElement.remove()" class="bg-red-600 px-3 rounded">-</button>
+  `;
+  container.appendChild(div);
+}
+
+function addTargetLanguage(btn) {
+  const container = btn.parentElement;
+  if (container.children.length >= 6) { // Max 5 target languages + button
+    showPopup("Maximum 5 target languages allowed per source");
+    return;
+  }
+  
+  const div = document.createElement('div');
+  div.className = 'flex gap-2';
+  div.innerHTML = `
+    <input type="text" class="flex-1 bg-gray-800 rounded p-2" placeholder="Target language">
+    <button onclick="this.parentElement.remove()" class="bg-red-600 px-3 rounded">-</button>
+  `;
+  // Insert before the "Add Target Language" button
+  btn.parentNode.insertBefore(div, btn);
+}
+
+function addTranslationPair() {
+  const container = document.getElementById('translation-pairs');
+  if (container.children.length >= 2) {
+    showPopup("Maximum 2 source languages allowed");
+    return;
+  }
+  
+  const div = document.createElement('div');
+  div.className = 'translation-pair border border-gray-700 p-4 rounded';
+  div.innerHTML = `
+    <div class="mb-4">
+      <div class="flex justify-between items-center mb-2">
+        <label class="block">Source Language</label>
+        <button onclick="this.closest('.translation-pair').remove()" class="text-red-500 text-sm">Remove Pair</button>
+      </div>
+      <input type="text" class="source-lang w-full bg-gray-800 rounded p-2" placeholder="e.g., en-US">
+    </div>
+    <div class="target-languages space-y-2">
+      <label class="block mb-2">Target Languages</label>
+      <button onclick="addTargetLanguage(this)" class="bg-blue-600 px-3 py-2 rounded w-full">Add Target Language</button>
+    </div>
+  `;
+  container.appendChild(div);
+}
+
+// Store translation settings
+let translationSettings = {
+  pairs: []
+};
+
+// Function to save translation settings
+function saveTranslationSettings() {
+  translationSettings.pairs = Array.from(document.querySelectorAll('.translation-pair')).map(pair => ({
+    source: pair.querySelector('.source-lang').value,
+    targets: Array.from(pair.querySelectorAll('.target-languages input'))
+      .map(input => input.value)
+      .filter(value => value.trim() !== '') // Filter out empty values
+  })).filter(pair => pair.source && pair.targets.length > 0); // Filter out empty pairs
+
+  localStorage.setItem('translationSettings', JSON.stringify(translationSettings));
+  updateAllLanguageSelectors();
+}
+
+// Function to load translation settings
+function loadTranslationSettings() {
+  const saved = localStorage.getItem('translationSettings');
+  if (saved) {
+    translationSettings = JSON.parse(saved);
+    const container = document.getElementById('translation-pairs');
+    container.innerHTML = ''; // Clear existing
+    translationSettings.pairs.forEach(pair => {
+      const div = document.createElement('div');
+      div.className = 'translation-pair border border-gray-700 p-4 rounded';
+      div.innerHTML = `
+        <div class="mb-4">
+          <div class="flex justify-between items-center mb-2">
+            <label class="block">Source Language</label>
+            <button onclick="this.closest('.translation-pair').remove()" class="text-red-500 text-sm">Remove Pair</button>
+          </div>
+          <input type="text" class="source-lang w-full bg-gray-800 rounded p-2" value="${pair.source}">
+        </div>
+        <div class="target-languages space-y-2">
+          <label class="block mb-2">Target Languages</label>
+          ${pair.targets.map(target => `
+            <div class="flex gap-2">
+              <input type="text" class="flex-1 bg-gray-800 rounded p-2" value="${target}">
+              <button onclick="this.parentElement.remove()" class="bg-red-600 px-3 rounded">-</button>
+            </div>
+          `).join('')}
+          <button onclick="addTargetLanguage(this)" class="bg-blue-600 px-3 py-2 rounded w-full">Add Target Language</button>
+        </div>
+      `;
+      container.appendChild(div);
+    });
+  } else {
+    // If no saved settings, create one empty pair
+    addTranslationPair();
+  }
+  updateAllLanguageSelectors();
+}
+
+// Function to update all language selectors
+function updateAllLanguageSelectors() {
+  const selectors = document.querySelectorAll('[id^="translation-lang-"]');
+  selectors.forEach(selector => {
+    updateLanguageSelector(selector.id.replace('translation-lang-', ''));
+  });
+}
+
+// Fix updateTranslationView function
+function updateTranslationView(uid) {
+  const selectedLang = $(`#translation-lang-${uid}`).val();
+  localStorage.setItem(`translation-pref-${uid}`, selectedLang);
+  $(`#translation-${uid}`).text(''); // Clear current translation
+}
+
+// Load settings on page load
+document.addEventListener('DOMContentLoaded', loadTranslationSettings);
+
+// Save settings when STT modal is closed
+document.getElementById('sttModal').addEventListener('close', saveTranslationSettings);
+</script>
+
+</body>
+</html>
