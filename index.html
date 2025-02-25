@@ -640,19 +640,32 @@ async function acquireToken() {
 async function subscribe(user, mediaType) {
   const uid = user.uid;
   await client.subscribe(user, mediaType);
-  console.log("subscribe success");
+  console.log(`[${new Date().toLocaleTimeString()}] Subscribed to ${uid} for ${mediaType}`);
+  
   if (mediaType === "video") {
+    // Remove any existing container for this user first
+    $(`#video-wrapper-${uid}`).remove();
+    
     const player = $(`
-      <div class="remote-video">
-        <div id="player-${uid}" class="w-full h-full"></div>
-        <div class="transcription-overlay">
-          <div id="transcription-${uid}" class="text-xl mb-2"></div>
-          <div id="translation-${uid}" class="text-gray-300"></div>
+      <div id="video-wrapper-${uid}" class="video-wrapper">
+        <div class="language-selector">
+          <select id="translation-lang-${uid}" 
+                  class="bg-gray-800 rounded px-2 py-1 text-sm" 
+                  onchange="updateTranslationView('${uid}')">
+          </select>
+        </div>
+        <div class="video-container">
+          <div id="player-${uid}" class="w-full h-full"></div>
+          <div class="transcription-overlay">
+            <div id="transcription-${uid}" class="text-xl mb-2"></div>
+            <div id="translation-${uid}" class="text-gray-300"></div>
+          </div>
         </div>
       </div>
     `);
     $("#remote-playerlist").append(player);
     user.videoTrack.play(`player-${uid}`);
+    updateLanguageSelector(uid);
   }
   if (mediaType === "audio") {
     user.audioTrack.play();
@@ -668,9 +681,13 @@ client.on("stream-message", function(uid, data) {
     // Show overlay whenever a message is received
     showOverlay(msg.uid);
     
+    // Get current timestamp
+    const timestamp = new Date().toLocaleTimeString();
+    
     if (msg.data_type === "transcribe" && msg.words && msg.words.length) {
       const text = msg.words.map(word => word.text).join("");
-      $(`#transcription-${msg.uid}`).text(text);
+      $(`#video-wrapper-${msg.uid} #transcription-${msg.uid}`).text(text);
+      console.log(`[${timestamp}] Transcription from ${msg.uid}: ${text}`);
       addTranscribeItem(msg.uid, text);
     } 
     else if (msg.data_type === "translate" && msg.trans && msg.trans.length) {
@@ -678,7 +695,8 @@ client.on("stream-message", function(uid, data) {
       const translation = msg.trans.find(t => t.lang === selectedLang);
       if (translation) {
         const text = translation.texts.join("");
-        $(`#translation-${msg.uid}`).text(text);
+        $(`#video-wrapper-${msg.uid} #translation-${msg.uid}`).text(text);
+        console.log(`[${timestamp}] Translation (${selectedLang}) from ${msg.uid}: ${text}`);
         addTranslateItem(msg.uid, text);
       }
     }
@@ -959,7 +977,7 @@ $("#join").click(async function() {
     
     // Setup local video container with proper translation UI
     const localContainer = $(`
-      <div class="video-wrapper">
+      <div id="video-wrapper-${options.uid}" class="video-wrapper">
         <div class="language-selector">
           <select id="translation-lang-${options.uid}" 
                   class="bg-gray-800 rounded px-2 py-1 text-sm" 
@@ -1096,7 +1114,7 @@ $("#stop-trans").click(async function() {
 
 // Add helper functions for transcription display
 function addTranscribeItem(uid, text) {
-  console.log("Adding transcription for uid:", uid, text);
+  const timestamp = new Date().toLocaleTimeString();
   const itemId = `transcribe-${uid}-${transcribeIndex}`;
   
   if ($(`#${itemId}`)[0]) {
@@ -1104,19 +1122,17 @@ function addTranscribeItem(uid, text) {
   } else {
     const $item = $(`
       <div class="item" id="${itemId}">
+        <span class="timestamp">[${timestamp}]</span>
         <span class="uid">${uid}</span>:
         <span class="msg">${text}</span>
       </div>
     `);
     $("#stt-transcribe .content").prepend($item);
   }
-  
-  // Update overlay for the specific user
-  $(`#transcription-${uid}`).text(text);
 }
 
 function addTranslateItem(uid, text) {
-  console.log("Adding translation for uid:", uid, text);
+  const timestamp = new Date().toLocaleTimeString();
   const itemId = `translate-${uid}-${translateIndex}`;
   
   if ($(`#${itemId}`)[0]) {
@@ -1124,15 +1140,13 @@ function addTranslateItem(uid, text) {
   } else {
     const $item = $(`
       <div class="item" id="${itemId}">
+        <span class="timestamp">[${timestamp}]</span>
         <span class="uid">${uid}</span>:
         <span class="msg">${text}</span>
       </div>
     `);
     $("#stt-translate .content").append($item);
   }
-  
-  // Update overlay for the specific user
-  $(`#translation-${uid}`).text(text);
 }
 
 // Update speaking languages input
