@@ -51,14 +51,18 @@
       border-radius: 0.5rem;
       overflow: hidden;
       width: 100%;
-      max-width: 640px; /* Limit width of local video */
+      max-width: 640px;
       margin: 0 auto 1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
     }
 
     .video-container video {
       width: 100%;
       height: 100%;
       object-fit: contain;
+      display: block;
     }
 
     .transcription-overlay {
@@ -69,6 +73,14 @@
       background: rgba(0, 0, 0, 0.7);
       padding: 1rem;
       color: white;
+      z-index: 10;
+      width: 100%;
+      transition: opacity 0.3s ease;
+    }
+
+    .transcription-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
     }
 
     /* Remote video grid - limit to 4 columns */
@@ -393,7 +405,7 @@
               <div class="mb-4">
                 <div class="flex justify-between items-center mb-2">
                   <label class="block">Source Language</label>
-                  <button onclick="this.closest('.translation-pair').remove()" class="text-red-500 text-sm">Remove Pair</button>
+                  <button onclick="this.closest('.translation-pair').remove(); saveTranslationSettings();" class="text-red-500 text-sm">Remove Pair</button>
         </div>
                 <input type="text" class="source-lang w-full bg-gray-800 rounded p-2" placeholder="e.g., en-US">
               </div>
@@ -523,6 +535,10 @@ const gatewayAddress = "https://api.agora.io";
 // Keep track of available languages for each user
 const userLanguages = new Map(); // uid -> { speaking: string, translations: Set<string> }
 
+// Add timeout tracking variables
+const overlayTimeouts = new Map(); // uid -> timeout
+const OVERLAY_HIDE_DELAY = 5000; // 5 seconds
+
 // Initialize AgoraRTC client
 if (!client) {
   client = AgoraRTC.createClient({
@@ -561,7 +577,7 @@ function loadSavedSettings() {
 // Save settings functions
 function saveConnectionSettings() {
   options.appid = $("#appid").val();
-  options.channel = $("#channel").val();
+    options.channel = $("#channel").val();
   options.uid = $("#uid").val();
   
   // Save to localStorage
@@ -575,12 +591,14 @@ function saveConnectionSettings() {
 }
 
 function saveSTTSettings() {
-  // Save to localStorage
+  const speakingLanguages = Array.from(document.querySelectorAll('#speaking-languages input'))
+    .map(input => input.value)
+    .filter(value => value.trim() !== '');
+
   localStorage.setItem('sttSettings', JSON.stringify({
     key: $("#key").val(),
     secret: $("#secret").val(),
-    speakingLanguage: $("#speaking-language").val(),
-    translationLanguage: $("#translation-language").val()
+    speakingLanguages: speakingLanguages
   }));
   
   document.getElementById('sttModal').close();
@@ -641,12 +659,14 @@ async function subscribe(user, mediaType) {
   }
 }
 
-// Update stream message handler to use language from translation message
+// Update stream message handler
 client.on("stream-message", function(uid, data) {
   try {
     const Text = $protobufRoot.lookup("agora.audio2text.Text");
     const msg = Text.decode(data);
-    console.log("Received message:", msg);
+    
+    // Show overlay whenever a message is received
+    showOverlay(msg.uid);
     
     if (msg.data_type === "transcribe" && msg.words && msg.words.length) {
       const text = msg.words.map(word => word.text).join("");
@@ -654,16 +674,8 @@ client.on("stream-message", function(uid, data) {
       addTranscribeItem(msg.uid, text);
     } 
     else if (msg.data_type === "translate" && msg.trans && msg.trans.length) {
-      // Get currently selected language
-      const [selectedSource, selectedTarget] = ($(`#translation-lang-${msg.uid}`).val() || '').split(':');
-      
-      // Find translation that matches the selected language
-      const translation = msg.trans.find(t => {
-        const sourceLang = t.source || msg.source;
-        return (!selectedSource || sourceLang === selectedSource) && 
-               (!selectedTarget || t.language === selectedTarget);
-      }) || msg.trans[0];
-
+      const selectedLang = $(`#translation-lang-${msg.uid}`).val();
+      const translation = msg.trans.find(t => t.lang === selectedLang);
       if (translation) {
         const text = translation.texts.join("");
         $(`#translation-${msg.uid}`).text(text);
@@ -726,21 +738,23 @@ client.on("user-published", async function(user, mediaType) {
   }
 });
 
-// Update language selector creation
+// Update language selector to show all configured target languages
 function updateLanguageSelector(uid) {
   const selector = $(`#translation-lang-${uid}`);
   const currentSelection = selector.val();
-  selector.empty();
-
-  translationSettings.pairs.forEach(pair => {
-    const group = $(`<optgroup label="${pair.source}">`);
+  
+  // Get all configured target languages from settings
+  const allTargetLanguages = translationSettings.pairs.reduce((acc, pair) => {
     pair.targets.forEach(target => {
-      const option = $(`<option value="${pair.source}:${target}">
-        ${pair.source} → ${target}
-      </option>`);
-      group.append(option);
+      acc.push({ source: pair.source, target: target });
     });
-    selector.append(group);
+    return acc;
+  }, []);
+
+  selector.empty();
+  allTargetLanguages.forEach(({ source, target }) => {
+    const option = $(`<option value="${target}">${source} → ${target}</option>`);
+    selector.append(option);
   });
 
   // Restore previous selection or select first option
@@ -749,6 +763,9 @@ function updateLanguageSelector(uid) {
   } else {
     selector.find('option:first').prop('selected', true);
   }
+
+  // Log current selection for debugging
+  console.log(`Language selector for ${uid} set to:`, selector.val());
 }
 
 // Update startTranscription to handle multiple languages
@@ -767,7 +784,7 @@ async function startTranscription() {
   const body = {
     languages: Array.from(document.querySelectorAll('#speaking-languages input'))
       .map(input => input.value)
-      .filter(value => value.trim() !== ''), // Filter out empty values
+      .filter(value => value.trim() !== ''),
     maxIdleTime: 50,
     rtcConfig: {
       channelName: options.channel,
@@ -931,25 +948,40 @@ $("#join").click(async function() {
   }
 
   try {
-    // Join and store the assigned UID
     options.uid = await client.join(options.appid, options.channel, null, options.uid || null);
     console.log("Joined with UID:", options.uid);
     
-    // Create and publish both tracks
     const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
     localTrack = videoTrack;
     localAudioTrack = audioTrack;
     
     await client.publish([audioTrack, videoTrack]);
     
-    // Add local player with transcription overlay
-    $("#local-player").parent().append(`
-      <div class="transcription-overlay">
-        <div id="transcription-${options.uid}" class="text-xl mb-2"></div>
-        <div id="translation-${options.uid}" class="text-gray-300"></div>
+    // Setup local video container with proper translation UI
+    const localContainer = $(`
+      <div class="video-wrapper">
+        <div class="language-selector">
+          <select id="translation-lang-${options.uid}" 
+                  class="bg-gray-800 rounded px-2 py-1 text-sm" 
+                  onchange="updateTranslationView('${options.uid}')">
+          </select>
+        </div>
+        <div class="video-container">
+          <div id="local-player" class="w-full h-full"></div>
+          <div class="transcription-overlay">
+            <div id="transcription-${options.uid}" class="text-xl mb-2"></div>
+            <div id="translation-${options.uid}" class="text-gray-300"></div>
+          </div>
+        </div>
       </div>
     `);
+
+    // Replace existing local player
+    $("#local-player").parent().parent().replaceWith(localContainer);
     videoTrack.play("local-player");
+    
+    // Initialize language selector for local user
+    updateLanguageSelector(options.uid);
     
     updateButtonStates('joined');
     showPopup("Joined channel successfully");
@@ -962,6 +994,15 @@ $("#join").click(async function() {
 // Update leave handler
 $("#leave").click(async function() {
   try {
+    // Clear all timeouts including local user
+    overlayTimeouts.forEach((timeout, uid) => {
+      clearTimeout(timeout);
+    });
+    overlayTimeouts.clear();
+    
+    // Hide all overlays
+    $(`.transcription-overlay`).addClass('hidden');
+    
     if (localTrack) {
       localTrack.stop();
       localTrack.close();
@@ -1003,7 +1044,13 @@ function showPopup(message) {
 
 // Update user-unpublished handler to be more thorough
 client.on("user-unpublished", function(user) {
-  // Remove all elements related to this user
+  // Clear timeout if exists
+  if (overlayTimeouts.has(user.uid)) {
+    clearTimeout(overlayTimeouts.get(user.uid));
+    overlayTimeouts.delete(user.uid);
+  }
+  
+  // Remove elements
   $(`[id^="video-wrapper-${user.uid}"]`).remove();
   $(`[id^="player-${user.uid}"]`).remove();
 });
@@ -1135,7 +1182,7 @@ function addTranslationPair() {
     <div class="mb-4">
       <div class="flex justify-between items-center mb-2">
         <label class="block">Source Language</label>
-        <button onclick="this.closest('.translation-pair').remove()" class="text-red-500 text-sm">Remove Pair</button>
+        <button onclick="this.closest('.translation-pair').remove(); saveTranslationSettings();" class="text-red-500 text-sm">Remove Pair</button>
       </div>
       <input type="text" class="source-lang w-full bg-gray-800 rounded p-2" placeholder="e.g., en-US">
     </div>
@@ -1145,6 +1192,7 @@ function addTranslationPair() {
     </div>
   `;
   container.appendChild(div);
+  saveTranslationSettings();
 }
 
 // Store translation settings
@@ -1158,8 +1206,8 @@ function saveTranslationSettings() {
     source: pair.querySelector('.source-lang').value,
     targets: Array.from(pair.querySelectorAll('.target-languages input'))
       .map(input => input.value)
-      .filter(value => value.trim() !== '') // Filter out empty values
-  })).filter(pair => pair.source && pair.targets.length > 0); // Filter out empty pairs
+      .filter(value => value.trim() !== '')
+  })).filter(pair => pair.source && pair.targets.length > 0);
 
   localStorage.setItem('translationSettings', JSON.stringify(translationSettings));
   updateAllLanguageSelectors();
@@ -1167,11 +1215,29 @@ function saveTranslationSettings() {
 
 // Function to load translation settings
 function loadTranslationSettings() {
+  // Load speaking languages
+  const savedSTT = JSON.parse(localStorage.getItem('sttSettings') || '{}');
+  if (savedSTT.speakingLanguages) {
+    const container = document.getElementById('speaking-languages');
+    container.innerHTML = ''; // Clear existing
+    savedSTT.speakingLanguages.forEach(lang => {
+      const div = document.createElement('div');
+      div.className = 'flex gap-2';
+      div.innerHTML = `
+        <input type="text" class="flex-1 bg-gray-800 rounded p-2" value="${lang}">
+        <button onclick="this.parentElement.remove()" class="bg-red-600 px-3 rounded">-</button>
+      `;
+      container.appendChild(div);
+    });
+  }
+
+  // Load translation settings
   const saved = localStorage.getItem('translationSettings');
+  const container = document.getElementById('translation-pairs');
+  container.innerHTML = ''; // Clear existing
+
   if (saved) {
     translationSettings = JSON.parse(saved);
-    const container = document.getElementById('translation-pairs');
-    container.innerHTML = ''; // Clear existing
     translationSettings.pairs.forEach(pair => {
       const div = document.createElement('div');
       div.className = 'translation-pair border border-gray-700 p-4 rounded';
@@ -1196,10 +1262,13 @@ function loadTranslationSettings() {
       `;
       container.appendChild(div);
     });
-  } else {
-    // If no saved settings, create one empty pair
+  }
+
+  // Only create empty pair if there are no pairs at all
+  if (container.children.length === 0) {
     addTranslationPair();
   }
+
   updateAllLanguageSelectors();
 }
 
@@ -1223,6 +1292,38 @@ document.addEventListener('DOMContentLoaded', loadTranslationSettings);
 
 // Save settings when STT modal is closed
 document.getElementById('sttModal').addEventListener('close', saveTranslationSettings);
+
+// Add functions to manage overlay visibility
+function showOverlay(uid) {
+  // Clear existing timeout if any
+  if (overlayTimeouts.has(uid)) {
+    clearTimeout(overlayTimeouts.get(uid));
+  }
+  
+  // Show overlay for either local or remote user
+  if (uid === options.uid) {
+    // Local user
+    $(`.video-container .transcription-overlay`).removeClass('hidden');
+  } else {
+    // Remote user
+    $(`#video-wrapper-${uid} .transcription-overlay`).removeClass('hidden');
+  }
+  
+  // Set new timeout to hide overlay
+  const timeout = setTimeout(() => hideOverlay(uid), OVERLAY_HIDE_DELAY);
+  overlayTimeouts.set(uid, timeout);
+}
+
+function hideOverlay(uid) {
+  if (uid === options.uid) {
+    // Local user
+    $(`.video-container .transcription-overlay`).addClass('hidden');
+  } else {
+    // Remote user
+    $(`#video-wrapper-${uid} .transcription-overlay`).addClass('hidden');
+  }
+  overlayTimeouts.delete(uid);
+}
 </script>
 
 </body>
