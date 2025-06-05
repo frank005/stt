@@ -287,7 +287,7 @@
         </button>
         
         <button 
-          onclick="document.getElementById('sttModal').showModal()"
+          onclick="handleVersionChange();document.getElementById('sttModal').showModal()"
           class="bg-green-600 hover:bg-green-700 px-6 py-2 rounded-lg font-semibold"
         >
           STT Settings
@@ -381,7 +381,18 @@
     <dialog id="sttModal">
       <h2 class="text-xl font-bold mb-8">STT Settings</h2>
       
+      <!-- Inline alert for modal warnings -->
+      <div id="stt-modal-alert" class="hidden bg-red-600 text-white px-4 py-2 rounded mb-4"></div>
       <div class="space-y-6">
+        <!-- Version Selection -->
+        <div>
+          <label class="block mb-2">STT Version</label>
+          <select id="stt-version" class="w-full bg-gray-800 rounded p-2" onchange="handleVersionChange()">
+            <option value="6.x">6.x</option>
+            <option value="7.x">7.x</option>
+          </select>
+        </div>
+
         <!-- Authentication -->
         <div>
           <label class="block mb-2">Customer Key</label>
@@ -400,8 +411,9 @@
             <div class="flex gap-2">
               <input type="text" class="flex-1 bg-gray-800 rounded p-2" value="en-US">
               <button onclick="addLanguageInput('speaking-languages')" class="bg-blue-600 px-3 rounded">+</button>
-        </div>
-        </div>
+            </div>
+          </div>
+          <p class="text-gray-400 text-sm mt-1">Maximum <span id="max-speaking-languages">2</span> speaking languages allowed</p>
         </div>
 
         <!-- Translation -->
@@ -540,6 +552,7 @@ var localAudioTrack = null;
 let taskId = '';
 let tokenName = '';
 const gatewayAddress = "https://api.agora.io";
+let sttVersion = "6.x"; // Default to 6.x
 
 // Keep track of available languages for each user
 const userLanguages = new Map(); // uid -> { speaking: string, translations: Set<string> }
@@ -579,6 +592,10 @@ function loadSavedSettings() {
   const savedSTT = JSON.parse(localStorage.getItem('sttSettings') || '{}');
   if (savedSTT.key) $("#key").val(savedSTT.key);
   if (savedSTT.secret) $("#secret").val(savedSTT.secret);
+  if (savedSTT.version) {
+    $("#stt-version").val(savedSTT.version);
+    sttVersion = savedSTT.version;
+  }
   if (savedSTT.speakingLanguage) $("#speaking-language").val(savedSTT.speakingLanguage);
   if (savedSTT.translationLanguage) $("#translation-language").val(savedSTT.translationLanguage);
 }
@@ -607,7 +624,8 @@ function saveSTTSettings() {
   localStorage.setItem('sttSettings', JSON.stringify({
     key: $("#key").val(),
     secret: $("#secret").val(),
-    speakingLanguages: speakingLanguages
+    speakingLanguages: speakingLanguages,
+    version: $("#stt-version").val()
   }));
   
   document.getElementById('sttModal').close();
@@ -627,6 +645,11 @@ function GetAuthorization() {
 
 // Acquire token
 async function acquireToken() {
+  if (sttVersion === "7.x") {
+    // For 7.x, we don't need to acquire token separately
+    return { tokenName: null };
+  }
+
   const url = `${gatewayAddress}/v1/projects/${options.appid}/rtsc/speech-to-text/builderTokens`;
   const data = { instanceId: options.channel };
   let res = await fetch(url, {
@@ -805,9 +828,7 @@ async function startTranscription() {
   const data = await acquireToken();
   tokenName = data.tokenName;
 
-  const url = `${gatewayAddress}/v1/projects/${options.appid}/rtsc/speech-to-text/tasks?builderToken=${tokenName}`;
-  
-  // Build new request body format
+  // Build request body based on version
   const body = {
     languages: Array.from(document.querySelectorAll('#speaking-languages input'))
       .map(input => input.value)
@@ -819,6 +840,11 @@ async function startTranscription() {
       pubBotUid: $("#pusher-uid").val()
     }
   };
+
+  // Add name field for 7.x
+  if (sttVersion === "7.x") {
+    body.name = options.channel; // Using channel name as the agent name
+  }
 
   // Add optional tokens
   const pullToken = $("#puller-token").val();
@@ -888,6 +914,14 @@ async function startTranscription() {
 
   console.log("Starting transcription with body:", body);
 
+  // Determine URL based on version
+  let url;
+  if (sttVersion === "7.x") {
+    url = `${gatewayAddress}/api/speech-to-text/v1/projects/${options.appid}/join`;
+  } else {
+    url = `${gatewayAddress}/v1/projects/${options.appid}/rtsc/speech-to-text/tasks?builderToken=${tokenName}`;
+  }
+
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -914,11 +948,23 @@ async function startTranscription() {
     throw new Error(responseData.message || `HTTP error ${res.status}`);
   }
 
-  if (!responseData.taskId) {
-    throw new Error("No taskId received from server");
+  // Handle different response formats based on version
+  if (sttVersion === "7.x") {
+    if (!responseData.agent_id) {
+      throw new Error("No agent_id received from server");
+    }
+    taskId = responseData.agent_id;
+    // You might want to handle different status codes here
+    if (responseData.status !== "RUNNING") {
+      throw new Error(`Unexpected status: ${responseData.status}`);
+    }
+  } else {
+    if (!responseData.taskId) {
+      throw new Error("No taskId received from server");
+    }
+    taskId = responseData.taskId;
   }
 
-  taskId = responseData.taskId;
   updateButtonStates('transcribing');
   return responseData;
 }
@@ -927,10 +973,19 @@ async function startTranscription() {
 async function stopTranscription() {
   if (!taskId) return;
   
-  const url = `${gatewayAddress}/v1/projects/${options.appid}/rtsc/speech-to-text/tasks/${taskId}?builderToken=${tokenName}`;
+  // Determine URL and method based on version
+  let url;
+  let method;
+  if (sttVersion === "7.x") {
+    url = `${gatewayAddress}/api/speech-to-text/v1/projects/${options.appid}/agents/${taskId}/leave`;
+    method = 'POST';
+  } else {
+    url = `${gatewayAddress}/v1/projects/${options.appid}/rtsc/speech-to-text/tasks/${taskId}?builderToken=${tokenName}`;
+    method = 'DELETE';
+  }
   
   await fetch(url, {
-    method: 'DELETE',
+    method: method,
     headers: {
       "Content-Type": "application/json",
       "Authorization": GetAuthorization()
@@ -1161,18 +1216,14 @@ function addTranslateItem(uid, text) {
 // Update speaking languages input
 function addLanguageInput(containerId) {
   const container = document.getElementById(containerId);
-  if (container.children.length >= 2) {
-    showPopup("Maximum 2 speaking languages allowed");
+  const maxLanguages = sttVersion === "7.x" ? 4 : 2;
+  const currentInputs = Array.from(container.querySelectorAll('input')).map(input => input.value);
+  if (currentInputs.length >= maxLanguages) {
+    showPopup(`Maximum ${maxLanguages} speaking languages allowed for ${sttVersion}`);
     return;
   }
-  
-  const div = document.createElement('div');
-  div.className = 'flex gap-2';
-  div.innerHTML = `
-    <input type="text" class="flex-1 bg-gray-800 rounded p-2" placeholder="Enter language code">
-    <button onclick="this.parentElement.remove()" class="bg-red-600 px-3 rounded">-</button>
-  `;
-  container.appendChild(div);
+  currentInputs.push("");
+  renderSpeakingLanguagesInputs(currentInputs, maxLanguages);
 }
 
 function addTargetLanguage(btn) {
@@ -1194,8 +1245,10 @@ function addTargetLanguage(btn) {
 
 function addTranslationPair() {
   const container = document.getElementById('translation-pairs');
-  if (container.children.length >= 2) {
-    showPopup("Maximum 2 source languages allowed");
+  const maxPairs = sttVersion === "7.x" ? 4 : 2;
+  
+  if (container.children.length >= maxPairs) {
+    showSTTModalAlert(`Maximum ${maxPairs} source languages allowed for ${sttVersion}`);
     return;
   }
   
@@ -1240,19 +1293,12 @@ function saveTranslationSettings() {
 function loadTranslationSettings() {
   // Load speaking languages
   const savedSTT = JSON.parse(localStorage.getItem('sttSettings') || '{}');
+  const maxLanguages = sttVersion === "7.x" ? 4 : 2;
+  let languages = ["en-US"];
   if (savedSTT.speakingLanguages) {
-    const container = document.getElementById('speaking-languages');
-    container.innerHTML = ''; // Clear existing
-    savedSTT.speakingLanguages.forEach(lang => {
-      const div = document.createElement('div');
-      div.className = 'flex gap-2';
-      div.innerHTML = `
-        <input type="text" class="flex-1 bg-gray-800 rounded p-2" value="${lang}">
-        <button onclick="this.parentElement.remove()" class="bg-red-600 px-3 rounded">-</button>
-      `;
-      container.appendChild(div);
-    });
+    languages = savedSTT.speakingLanguages.slice(0, maxLanguages);
   }
+  renderSpeakingLanguagesInputs(languages, maxLanguages);
 
   // Load translation settings
   const saved = localStorage.getItem('translationSettings');
@@ -1261,7 +1307,10 @@ function loadTranslationSettings() {
 
   if (saved) {
     translationSettings = JSON.parse(saved);
-    translationSettings.pairs.forEach(pair => {
+    const maxPairs = sttVersion === "7.x" ? 4 : 2;
+    const pairs = translationSettings.pairs.slice(0, maxPairs);
+    
+    pairs.forEach(pair => {
       const div = document.createElement('div');
       div.className = 'translation-pair border border-gray-700 p-4 rounded';
       div.innerHTML = `
@@ -1346,6 +1395,69 @@ function hideOverlay(uid) {
     $(`#video-wrapper-${uid} .transcription-overlay`).addClass('hidden');
   }
   overlayTimeouts.delete(uid);
+}
+
+// Add version handling functions
+function handleVersionChange() {
+  sttVersion = $("#stt-version").val();
+  const maxLanguages = sttVersion === "7.x" ? 4 : 2;
+  
+  // Update max languages display
+  $("#max-speaking-languages").text(maxLanguages);
+  
+  // Get current values
+  const container = document.getElementById('speaking-languages');
+  const currentInputs = Array.from(container.querySelectorAll('input')).map(input => input.value);
+  const languages = currentInputs.slice(0, maxLanguages);
+  renderSpeakingLanguagesInputs(languages, maxLanguages);
+
+  // Update translation pairs container
+  const pairsContainer = document.getElementById('translation-pairs');
+  if (sttVersion === "7.x" && pairsContainer.children.length > 4) {
+    while (pairsContainer.children.length > 4) {
+      pairsContainer.lastChild.remove();
+    }
+  }
+}
+
+function renderSpeakingLanguagesInputs(languages, maxLanguages) {
+  const container = document.getElementById('speaking-languages');
+  container.innerHTML = '';
+  languages.forEach(lang => {
+    const div = document.createElement('div');
+    div.className = 'flex gap-2';
+    div.innerHTML = `
+      <input type="text" class="flex-1 bg-gray-800 rounded p-2" value="${lang}">
+      <button onclick="this.parentElement.remove()" class="bg-red-600 px-3 rounded">-</button>
+    `;
+    container.appendChild(div);
+  });
+  // Add the + button row if not at max
+  if (languages.length < maxLanguages) {
+    const addDiv = document.createElement('div');
+    addDiv.className = 'flex gap-2';
+    addDiv.innerHTML = `
+      <button onclick="addLanguageInput('speaking-languages')" class="bg-blue-600 px-3 rounded w-full">+</button>
+    `;
+    container.appendChild(addDiv);
+  }
+}
+
+// Show inline alert in STT modal
+function showSTTModalAlert(message) {
+  const alertDiv = document.getElementById('stt-modal-alert');
+  alertDiv.textContent = message;
+  alertDiv.classList.remove('hidden');
+  // Scroll modal to top so alert is visible
+  const sttModal = document.getElementById('sttModal');
+  if (sttModal && typeof sttModal.scrollTo === 'function') {
+    sttModal.scrollTo({ top: 0, behavior: 'smooth' });
+  } else if (sttModal) {
+    sttModal.scrollTop = 0;
+  }
+  setTimeout(() => {
+    alertDiv.classList.add('hidden');
+  }, 3000);
 }
 </script>
 
