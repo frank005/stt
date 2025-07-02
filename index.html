@@ -389,7 +389,7 @@
           <label class="block mb-2">STT Version</label>
           <select id="stt-version" class="w-full bg-gray-800 rounded p-2" onchange="handleVersionChange()">
             <option value="6.x">6.x</option>
-            <option value="7.x">7.x</option>
+            <option value="7.x" selected>7.x</option>
           </select>
         </div>
 
@@ -552,7 +552,7 @@ var localAudioTrack = null;
 let taskId = '';
 let tokenName = '';
 const gatewayAddress = "https://api.agora.io";
-let sttVersion = "6.x"; // Default to 6.x
+let sttVersion = "7.x"; // Default to 7.x
 
 // Keep track of available languages for each user
 const userLanguages = new Map(); // uid -> { speaking: string, translations: Set<string> }
