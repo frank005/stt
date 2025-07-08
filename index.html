@@ -377,7 +377,13 @@
 
         <div>
           <label class="block mb-2">User ID (optional)</label>
-          <input id="uid" type="text" class="w-full bg-gray-800 rounded p-2" placeholder="Enter user ID">
+          <div class="flex items-center gap-2">
+            <input id="uid" type="text" class="w-full bg-gray-800 rounded p-2" placeholder="Enter user ID">
+            <label class="flex items-center text-xs gap-1 ml-2">
+              <input id="uid-string" type="checkbox" class="mr-1 align-middle">
+              Use string UID
+            </label>
+          </div>
         </div>
       </div>
 
@@ -659,6 +665,14 @@ function loadSavedSettings() {
     $("#channel").val(savedConnection.channel);
     options.channel = savedConnection.channel;
   }
+  if (savedConnection.uid !== undefined) {
+    $("#uid").val(savedConnection.uid);
+  }
+  if (savedConnection.uidString) {
+    $("#uid-string").prop('checked', true);
+  } else {
+    $("#uid-string").prop('checked', false);
+  }
 
   // Load STT settings
   const savedSTT = JSON.parse(localStorage.getItem('sttSettings') || '{}');
@@ -677,12 +691,16 @@ function loadSavedSettings() {
 function saveConnectionSettings() {
   options.appid = $("#appid").val();
     options.channel = $("#channel").val();
-  options.uid = $("#uid").val();
+  const uidVal = $("#uid").val();
+  const uidString = $("#uid-string").is(":checked");
+  options.uid = uidVal !== '' ? (uidString ? uidVal : parseInt(uidVal, 10)) : null;
   
   // Save to localStorage
   localStorage.setItem('connectionSettings', JSON.stringify({
     appid: options.appid,
-    channel: options.channel
+    channel: options.channel,
+    uid: uidVal,
+    uidString: uidString
   }));
   
   document.getElementById('connectionModal').close();
@@ -1021,9 +1039,16 @@ $("#join").click(async function() {
     showPopup("Please configure connection settings first");
     return;
   }
-
+  // Get UID and type from input and checkbox
+  const uidVal = $("#uid").val();
+  const uidString = $("#uid-string").is(":checked");
+  let joinUid = null;
+  if (uidVal !== '') {
+    joinUid = uidString ? uidVal : parseInt(uidVal, 10);
+    if (!uidString && isNaN(joinUid)) joinUid = null;
+  }
   try {
-    options.uid = await client.join(options.appid, options.channel, null, options.uid || null);
+    options.uid = await client.join(options.appid, options.channel, null, joinUid);
     console.log("Joined with UID:", options.uid);
     
     const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
