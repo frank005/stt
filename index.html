@@ -363,9 +363,9 @@
         </div>
       <div class="video-container">
         <div id="local-player" class="w-full h-full"></div>
-        <div class="transcription-overlay">
-          <div id="transcription-local" class="text-xl mb-2"></div>
-          <div id="translation-local" class="text-gray-300"></div>
+        <div class="transcriptioncaps-overlay">
+          <div id="transcriptioncaps-local" class="text-xl mb-2"></div>
+          <div id="translationcaps-local" class="text-gray-300"></div>
         </div>
         </div>
       </div>
@@ -1121,9 +1121,9 @@ async function stopTranscription() {
   translationEnabled = false;
   updateButtonStates('joined');
   
-  // Clear all transcriptions
-  $("[id^=transcription-]").text("");
-  $("[id^=translation-]").text("");
+  // Clear all transcriptions captions
+  $("[id^=transcriptioncaps-]").text("");
+  $("[id^=translationcaps-]").text("");
 }
 
 // Update button state management
