@@ -1564,7 +1564,7 @@ async function disableTranslationDuringSession() {
     updateTranslationStatus();
     
     // Clear only translation display overlays (not translation pairs in settings)
-    $("[id^=translation-]").filter(function() {
+    $("[id^=translationcaps-]").filter(function() {
       return this.id.match(/^translation-\d+$/);
     }).text("");
     
