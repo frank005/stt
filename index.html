@@ -227,6 +227,15 @@
       margin-bottom: 0;
     }
 
+    .translation-pair-modal {
+      background: rgba(0, 0, 0, 0.2);
+      margin-bottom: 0.75rem;
+    }
+
+    .translation-pair-modal:last-child {
+      margin-bottom: 0;
+    }
+
     .target-languages {
       border-top: 1px solid rgba(75, 85, 99, 0.4);
       padding-top: 0.75rem;
@@ -336,7 +345,7 @@
         </button>
         
         <button 
-          onclick="handleVersionChange();document.getElementById('sttModal').showModal()"
+          onclick="handleVersionChange();document.getElementById('sttModal').showModal();document.getElementById('request-preview').classList.add('hidden');"
           class="bg-green-600 hover:bg-green-700 px-4 py-1.5 rounded-lg font-semibold text-sm"
         >
           STT Settings
@@ -395,10 +404,10 @@
         <span class="text-sm text-gray-300">Translation:</span>
         <span id="translation-status" class="text-sm font-medium text-gray-400">Disabled</span>
       </div>
-      <button onclick="enableTranslationDuringSession()" class="bg-green-600 hover:bg-green-700 px-4 py-1.5 rounded-lg font-semibold text-sm">
+      <button id="enable-translation" onclick="enableTranslationDuringSession()" class="bg-green-600 hover:bg-green-700 px-4 py-1.5 rounded-lg font-semibold text-sm">
         Enable
       </button>
-      <button onclick="disableTranslationDuringSession()" class="bg-orange-600 hover:bg-orange-700 px-4 py-1.5 rounded-lg font-semibold text-sm">
+      <button id="disable-translation" onclick="disableTranslationDuringSession()" class="bg-orange-600 hover:bg-orange-700 px-4 py-1.5 rounded-lg font-semibold text-sm">
         Disable
       </button>
       <button onclick="showTranslationConfigModal()" class="bg-blue-600 hover:bg-blue-700 px-4 py-1.5 rounded-lg font-semibold text-sm">
@@ -677,7 +686,7 @@
           onclick="updateTranslationLanguagesDuringSession()"
           class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
         >
-          Update Languages
+          Update/Enable Languages
         </button>
       </div>
     </dialog>
@@ -873,8 +882,8 @@ async function subscribe(user, mediaType) {
         <div class="video-container">
           <div id="player-${uid}" class="w-full h-full"></div>
           <div class="transcription-overlay">
-            <div id="transcription-${uid}" class="text-xl mb-2"></div>
-            <div id="translation-${uid}" class="text-gray-300"></div>
+            <div id="transcriptioncaps-${uid}" class="text-xl mb-2"></div>
+            <div id="translationcaps-${uid}" class="text-gray-300"></div>
           </div>
         </div>
       </div>
@@ -902,7 +911,7 @@ client.on("stream-message", function(uid, data) {
     
     if (msg.data_type === "transcribe" && msg.words && msg.words.length) {
       const text = msg.words.map(word => word.text).join("");
-      $(`#video-wrapper-${msg.uid} #transcription-${msg.uid}`).text(text);
+      $(`#video-wrapper-${msg.uid} #transcriptioncaps-${msg.uid}`).text(text);
       console.log(`[${timestamp}] Transcription from ${msg.uid}: ${text}`);
       addTranscribeItem(msg.uid, text);
     } 
@@ -911,7 +920,7 @@ client.on("stream-message", function(uid, data) {
       const translation = msg.trans.find(t => t.lang === selectedLang);
       if (translation) {
         const text = translation.texts.join("");
-        $(`#video-wrapper-${msg.uid} #translation-${msg.uid}`).text(text);
+        $(`#video-wrapper-${msg.uid} #translationcaps-${msg.uid}`).text(text);
         console.log(`[${timestamp}] Translation (${selectedLang}) from ${msg.uid}: ${text}`);
         addTranslateItem(msg.uid, text);
       }
@@ -951,8 +960,8 @@ client.on("user-published", async function(user, mediaType) {
         <div class="remote-video">
           <div id="player-${user.uid}" class="w-full h-full"></div>
           <div class="transcription-overlay">
-            <div id="transcription-${user.uid}" class="text-xl mb-2"></div>
-            <div id="translation-${user.uid}" class="text-gray-300"></div>
+            <div id="transcriptioncaps-${user.uid}" class="text-xl mb-2"></div>
+            <div id="translationcaps-${user.uid}" class="text-gray-300"></div>
           </div>
         </div>
       </div>
@@ -1119,6 +1128,9 @@ async function stopTranscription() {
   
   taskId = null;
   translationEnabled = false;
+  $("#enable-translation").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
+  $("#disable-translation").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+  $("#translation-controls").addClass('hidden');
   updateButtonStates('joined');
   
   // Clear all transcriptions captions
@@ -1148,6 +1160,8 @@ function updateButtonStates(state) {
       $("#stop-trans").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
       // Always show translation controls when transcribing, regardless of translation state
       $("#translation-controls").removeClass('hidden');
+      $("#enable-translation").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+      $("#disable-translation").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
       break;
   }
 }
@@ -1188,8 +1202,8 @@ $("#join").click(async function() {
         <div class="video-container">
           <div id="local-player" class="w-full h-full"></div>
           <div class="transcription-overlay">
-            <div id="transcription-${options.uid}" class="text-xl mb-2"></div>
-            <div id="translation-${options.uid}" class="text-gray-300"></div>
+            <div id="transcriptioncaps-${options.uid}" class="text-xl mb-2"></div>
+            <div id="translationcaps-${options.uid}" class="text-gray-300"></div>
           </div>
         </div>
       </div>
@@ -1203,6 +1217,12 @@ $("#join").click(async function() {
     updateLanguageSelector(options.uid);
     
     updateButtonStates('joined');
+    //in case RTT was started first, adjust Start RTT and Stop RTT buttons states
+    if (taskId) {
+      $("#start-trans").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+      $("#stop-trans").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
+      $("#translation-controls").removeClass('hidden');
+    }
     showPopup("Joined channel successfully");
   } catch (error) {
     console.error(error);
@@ -1235,6 +1255,12 @@ $("#leave").click(async function() {
     $("#remote-playerlist").empty();
     
     updateButtonStates('initial');
+    //account for RTT task still running after leaving
+    if (taskId) {
+      $("#start-trans").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+      $("#stop-trans").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
+      $("#translation-controls").addClass('hidden');
+    }
     showPopup("Left channel successfully");
   } catch (error) {
     console.error(error);
@@ -1316,7 +1342,7 @@ $("#stop-trans").click(async function() {
 // Add helper functions for transcription display
 function addTranscribeItem(uid, text) {
   const timestamp = new Date().toLocaleTimeString();
-  const itemId = `transcribe-${uid}-${transcribeIndex}`;
+  const itemId = `transcribecaps-${uid}-${transcribeIndex}`;
   
   if ($(`#${itemId}`)[0]) {
     $(`#${itemId} .msg`).html(text);
@@ -1334,7 +1360,7 @@ function addTranscribeItem(uid, text) {
 
 function addTranslateItem(uid, text) {
   const timestamp = new Date().toLocaleTimeString();
-  const itemId = `translate-${uid}-${translateIndex}`;
+  const itemId = `translatecaps-${uid}-${translateIndex}`;
   
   if ($(`#${itemId}`)[0]) {
     $(`#${itemId} .msg`).html(text);
@@ -1498,7 +1524,7 @@ function updateAllLanguageSelectors() {
 function updateTranslationView(uid) {
   const selectedLang = $(`#translation-lang-${uid}`).val();
   localStorage.setItem(`translation-pref-${uid}`, selectedLang);
-  $(`#translation-${uid}`).text(''); // Clear current translation
+  $(`#translationcaps-${uid}`).text(''); // Clear current translation
 }
 
 // Load settings on page load
@@ -1565,9 +1591,11 @@ async function disableTranslationDuringSession() {
     
     // Clear only translation display overlays (not translation pairs in settings)
     $("[id^=translationcaps-]").filter(function() {
-      return this.id.match(/^translation-\d+$/);
+      return this.id.match(/^translationcaps-\d+$/);
     }).text("");
     
+    $("#enable-translation").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
+    $("#disable-translation").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
     showPopup("Translation disabled during session");
     
     // Ensure translation controls remain visible
@@ -1575,8 +1603,12 @@ async function disableTranslationDuringSession() {
       if (taskId) {
         $("#translation-controls").removeClass('hidden');
         console.log("Translation controls should be visible now");
+        // Clear only translation display overlays (not translation pairs in settings) with timeout, sometime RTM message arrives after task is stopped
+        $("[id^=translationcaps-]").filter(function() {
+        return this.id.match(/^translationcaps-\d+$/);
+    }).text("");
       }
-    }, 100);
+    }, 300);
   } catch (error) {
     console.error("Error disabling translation:", error);
     showPopup("Failed to disable translation: " + error.message);
@@ -1606,10 +1638,11 @@ async function enableTranslationDuringSession() {
       return;
     }
     
-    let updateMask = "translateConfig.enable";
+    let updateMask = "translateConfig.enable,translateConfig.languages";
     let body = {
       translateConfig: {
-        enable: true
+        enable: true,
+        languages: translationPairs
       }
     };
     
@@ -1623,6 +1656,8 @@ async function enableTranslationDuringSession() {
     translationEnabled = true;
     updateTranslationStatus();
     
+    $("#enable-translation").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+    $("#disable-translation").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
     showPopup("Translation enabled");
   } catch (error) {
     console.error("Error enabling translation:", error);
@@ -1669,7 +1704,7 @@ function loadSessionTranslationPairs() {
 function addSessionTranslationPair(source = '', targets = ['']) {
   const container = document.getElementById('session-translation-pairs');
   const div = document.createElement('div');
-  div.className = 'translation-pair border border-gray-700 p-4 rounded';
+  div.className = 'translation-pair-modal border border-gray-700 p-4 rounded';
   div.innerHTML = `
     <div class="mb-4">
       <div class="flex justify-between items-center mb-2">
@@ -1701,7 +1736,7 @@ async function updateTranslationLanguagesDuringSession() {
     }
     
     // Get current translation pairs from the modal
-    const translationPairs = Array.from(document.querySelectorAll('#session-translation-pairs .translation-pair')).map(pair => {
+    const translationPairs = Array.from(document.querySelectorAll('#session-translation-pairs .translation-pair-modal')).map(pair => {
       const source = pair.querySelector('.source-lang').value;
       const targets = Array.from(pair.querySelectorAll('.target-languages input')).map(input => input.value);
       return {
@@ -1751,6 +1786,8 @@ async function updateTranslationLanguagesDuringSession() {
     // Update the STT settings modal to reflect the new configuration
     updateSTTSettingsFromSession();
     
+    $("#enable-translation").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+    $("#disable-translation").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
     showPopup("Translation languages updated and enabled");
     document.getElementById('translationConfigModal').close();
   } catch (error) {
@@ -1766,16 +1803,20 @@ function updateTranslationStatus() {
     if (translationEnabled) {
       statusElement.textContent = 'Enabled';
       statusElement.className = 'text-sm font-medium text-green-400';
+      $("#enable-translation").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
+      $("#disable-translation").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
     } else {
       statusElement.textContent = 'Disabled';
       statusElement.className = 'text-sm font-medium text-gray-400';
+      $("#enable-translation").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
+      $("#disable-translation").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
     }
   }
 }
 
 // Function to update STT settings from session configuration
 function updateSTTSettingsFromSession() {
-  const sessionPairs = Array.from(document.querySelectorAll('#session-translation-pairs .translation-pair')).map(pair => {
+  const sessionPairs = Array.from(document.querySelectorAll('#session-translation-pairs .translation-pair-modal')).map(pair => {
     const source = pair.querySelector('.source-lang').value;
     const targets = Array.from(pair.querySelectorAll('.target-languages input')).map(input => input.value);
     return { source, targets };
