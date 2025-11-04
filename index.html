@@ -351,7 +351,7 @@
           STT Settings
         </button>
 
-        <a href="https://github.com/frank005/stt" 
+        <a href="https://github.com/AgoraIO-Community/stt" 
            target="_blank" 
            class="text-gray-300 hover:text-white transition-colors"
            title="View on GitHub">
@@ -1009,7 +1009,7 @@ function updateLanguageSelector(uid) {
 
   selector.empty();
   allTargetLanguages.forEach(({ source, target }) => {
-    const option = $(`<option value="${target}">${source} → ${target}</option>`);
+    const option = $(`<option value="${target}">${source} ? ${target}</option>`);
     selector.append(option);
   });
 

@@ -15,7 +15,7 @@ A web app for real-time speech-to-text (STT) transcription and translation using
 ## Setup
 1. **Clone the repository:**
    ```sh
-   git clone https://github.com/frank005/stt.git
+   git clone https://github.com/AgoraIO-Community/stt.git
    cd stt
    ```
 2. **Install a static server (optional):**
@@ -83,7 +83,7 @@ When transcription is active, you'll see additional controls for managing transl
   - The app uses the HTML `<dialog>` element for modals. For best results, use a modern browser (Chrome, Edge, Firefox, Safari). If you experience issues, try updating your browser.
 
 ## GitHub
-[https://github.com/frank005/stt](https://github.com/frank005/stt)
+[https://github.com/AgoraIO-Community/stt](https://github.com/AgoraIO-Community/stt)
 
 ---
 
