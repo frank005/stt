@@ -15,8 +15,8 @@ A web app for real-time speech-to-text (STT) transcription and translation using
 ## Setup
 1. **Clone the repository:**
    ```sh
-   git clone https://github.com/AgoraIO-Community/stt.git
-   cd stt
+   git clone https://github.com/AgoraIO-Community/agora-stt.git
+   cd agora-stt
    ```
 2. **Install a static server (optional):**
    You can use [serve](https://www.npmjs.com/package/serve) or any static file server:
@@ -83,7 +83,7 @@ When transcription is active, you'll see additional controls for managing transl
   - The app uses the HTML `<dialog>` element for modals. For best results, use a modern browser (Chrome, Edge, Firefox, Safari). If you experience issues, try updating your browser.
 
 ## GitHub
-[https://github.com/AgoraIO-Community/stt](https://github.com/AgoraIO-Community/stt)
+[https://github.com/AgoraIO-Community/agora-stt](https://github.com/AgoraIO-Community/agora-stt)
 
 ---
 
