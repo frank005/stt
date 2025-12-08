@@ -1,0 +1,305 @@
+/* Modal styles */
+dialog {
+  background: #1f2937;
+  color: white;
+  padding: 2rem;
+  border-radius: 1rem;
+  border: 1px solid #374151;
+  max-width: 90vw;
+  width: 800px;
+  margin: 2rem auto;
+  overflow-y: auto;
+  max-height: 90vh;
+}
+
+dialog::backdrop {
+  background: rgba(0, 0, 0, 0.8);
+}
+
+dialog h2 {
+  padding: 0 1rem;  /* Add padding to title */
+  font-size: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+/* Video container styles */
+.video-container {
+  position: relative;
+  aspect-ratio: 16/9;
+  background: #000;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  width: 100%;
+  max-width: 640px;
+  margin: 0 auto 1rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.video-container video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  display: block;
+}
+
+.transcription-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 1rem;
+  color: white;
+  z-index: 10;
+  width: 100%;
+  transition: opacity 0.3s ease;
+}
+
+.transcription-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Remote video grid - limit to 4 columns */
+#remote-playerlist {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  gap: 1rem;
+  width: 100%;
+}
+
+@media (min-width: 1024px) {
+  #remote-playerlist {
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    max-width: 100%;
+  }
+}
+
+.remote-video {
+  position: relative;
+  aspect-ratio: 16/9;
+  background: #000;
+  border-radius: 0.5rem;
+  overflow: hidden;
+  width: 100%;
+}
+
+.remote-video video {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.remote-video .transcription-overlay {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  background: rgba(0, 0, 0, 0.7);
+  padding: 1rem;
+  color: white;
+  z-index: 10;
+}
+
+/* Popup styles */
+.popupHidden {
+  display: none;
+}
+
+.popupShow {
+  position: fixed;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  background: #2d2d2d;
+  color: white;
+  padding: 1rem 1.5rem;
+  border-radius: 0.5rem;
+  margin-bottom: 0.5rem;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
+  animation: fadeInOut 0.3s ease-in-out;
+  z-index: 10000;
+}
+
+@keyframes fadeInOut {
+  0% { opacity: 0; transform: translate(-50%, 20px); }
+  100% { opacity: 1; transform: translate(-50%, 0); }
+}
+
+/* Input styles */
+input[type="text"], input[type="number"] {
+  width: 100%;
+  padding: 0.5rem 0.75rem;
+  background: #374151 !important;
+  border: 1px solid #4B5563;
+  color: white !important;
+  border-radius: 0.5rem;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+}
+
+input[type="text"]:disabled, input[type="number"]:disabled {
+  background: #1f2937 !important;
+  color: #6b7280 !important;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+input[type="text"]::placeholder {
+  color: #9CA3AF;
+}
+
+/* Modal section spacing */
+.space-y-6 {
+  padding: 0 1rem;
+}
+
+.space-y-4 {
+  padding: 0 1rem;
+}
+
+.border-t {
+  border-color: #4B5563;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+}
+
+/* Modal labels */
+label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #E5E7EB;
+}
+
+/* Modal buttons */
+dialog button {
+  min-width: 80px;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+}
+
+/* Update modal footer */
+dialog .flex.justify-end {
+  margin: 1.5rem 0 0 0;  /* Remove negative margins */
+  padding: 1rem;
+  background: #161e2e;
+  border-top: 1px solid #374151;
+  width: 100%;
+}
+
+/* Content container inside dialog */
+dialog > div:not(.flex) {
+  padding: 0 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.translation-pair {
+  background: rgba(0, 0, 0, 0.2);
+  margin-bottom: 0.75rem;
+}
+
+.translation-pair:last-child {
+  margin-bottom: 0;
+}
+
+.translation-pair-modal {
+  background: rgba(0, 0, 0, 0.2);
+  margin-bottom: 0.75rem;
+}
+
+.translation-pair-modal:last-child {
+  margin-bottom: 0;
+}
+
+.target-languages {
+  border-top: 1px solid rgba(75, 85, 99, 0.4);
+  padding-top: 0.75rem;
+  margin-top: 0.75rem;
+}
+
+/* Fix grid alignment for translation pairs */
+#translation-pairs {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Remove number input spinners */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
+/* Fix grid alignment */
+.settings-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 0.75rem;
+}
+
+/* Remove any empty remote video containers */
+.remote-video:empty {
+  display: none;
+}
+
+/* Update video container styles */
+.video-wrapper {
+  margin-bottom: 1rem;
+}
+
+.language-selector {
+  margin-bottom: 0.5rem;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.language-selector select {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+}
+
+/* Remove empty containers */
+.remote-video:empty,
+#remote-playerlist:empty,
+#remote-playerlist > div:empty,
+.video-wrapper:empty {
+  display: none !important;
+}
+
+/* Translation controls styling */
+#translation-controls {
+  transition: all 0.3s ease;
+  border-top: 1px solid #374151;
+  padding-top: 1rem;
+}
+
+#translation-controls button {
+  min-width: 80px;
+}
+
+/* Session translation modal styling */
+#translationConfigModal {
+  background: #1f2937;
+  color: white;
+  padding: 2rem;
+  border-radius: 1rem;
+  border: 1px solid #374151;
+  max-width: 90vw;
+  width: 600px;
+  margin: 2rem auto;
+  overflow-y: auto;
+  max-height: 90vh;
+}
+
+#translationConfigModal::backdrop {
+  background: rgba(0, 0, 0, 0.8);
+}
+
