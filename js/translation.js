@@ -243,7 +243,7 @@ function addSessionTranslationPair(source = '', targets = ['']) {
       ${targets.map(target => `
         <div class="flex gap-2">
           <input type="text" class="flex-1 bg-gray-800 rounded p-2" value="${target}" placeholder="Target language">
-          <button onclick="this.parentElement.remove()" class="bg-red-600 px-3 rounded">-</button>
+          <button onclick="this.parentElement.remove()"></button>
         </div>
       `).join('')}
       <button onclick="addTargetLanguage(this)" class="bg-blue-600 px-3 py-2 rounded w-full">Add Target Language</button>
@@ -381,7 +381,7 @@ function updateSTTSettingsFromSession() {
         ${targets.map(target => `
           <div class="flex gap-2">
             <input type="text" class="flex-1 bg-gray-800 rounded p-2" value="${target}">
-            <button onclick="this.parentElement.remove()" class="bg-red-600 px-3 rounded">-</button>
+            <button onclick="this.parentElement.remove()"></button>
           </div>
         `).join('')}
         <button onclick="addTargetLanguage(this)" class="bg-blue-600 px-3 py-2 rounded w-full">Add Target Language</button>

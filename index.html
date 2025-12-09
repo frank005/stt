@@ -24,26 +24,38 @@
   <link rel="stylesheet" href="css/styles.css">
 </head>
 
-<body class="bg-gray-900 text-white min-h-screen p-8">
+<body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white min-h-screen">
   <!-- Add popup section at the top of body -->
   <div id="popup-section" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50"></div>
 
   <div class="max-w-7xl mx-auto">
-    <div class="flex justify-between items-center mb-8">
-      <h1 class="text-2xl font-bold">Agora Real-Time Transcription & Translation Demo</h1>
+    <div class="flex justify-between items-center mb-10">
+      <div>
+        <h1 class="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent mb-1">
+          Agora Real-Time Transcription & Translation
+        </h1>
+        <p class="text-slate-400 text-sm">Live speech-to-text and translation demo</p>
+      </div>
       
       <div class="flex gap-3 items-center">
         <button 
           onclick="document.getElementById('connectionModal').showModal()"
-          class="bg-blue-600 hover:bg-blue-700 px-4 py-1.5 rounded-lg font-semibold text-sm"
+          class="modern-btn modern-btn-primary"
         >
+          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path>
+          </svg>
           Connection Settings
         </button>
         
         <button 
           onclick="handleVersionChange();document.getElementById('sttModal').showModal();document.getElementById('request-preview').classList.add('hidden');"
-          class="bg-green-600 hover:bg-green-700 px-4 py-1.5 rounded-lg font-semibold text-sm"
+          class="modern-btn modern-btn-success"
         >
+          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
           STT Settings
         </button>
 
@@ -62,13 +74,13 @@
     <div class="video-wrapper">
       <div class="language-selector">
         <select id="translation-lang-local" 
-                class="bg-gray-800 rounded px-2 py-1 text-sm" 
+                class="language-select-dropdown" 
                 onchange="updateTranslationView('local')">
         </select>
-        </div>
+      </div>
       <div class="video-container">
         <div id="local-player" class="w-full h-full"></div>
-        <div class="transcriptioncaps-overlay">
+        <div class="transcriptioncaps-overlay hidden">
           <div id="transcriptioncaps-local" class="text-xl mb-2"></div>
           <div id="translationcaps-local" class="text-gray-300"></div>
         </div>
@@ -79,41 +91,72 @@
     <div id="remote-playerlist" class="remote-grid"></div>
 
     <!-- Control buttons -->
-    <div class="flex gap-3 mt-6">
-      <button id="join" class="bg-blue-600 hover:bg-blue-700 px-4 py-1.5 rounded-lg font-semibold text-sm">
-          Join
-        </button>
-      <button id="leave" class="bg-red-600 hover:bg-red-700 px-4 py-1.5 rounded-lg font-semibold text-sm opacity-50 cursor-not-allowed" disabled>
-          Leave
-        </button>
-      <button id="start-trans" class="bg-green-600 hover:bg-green-700 px-4 py-1.5 rounded-lg font-semibold text-sm opacity-50 cursor-not-allowed" disabled>
-          Start RTT
-        </button>
-      <button id="stop-trans" class="bg-red-600 hover:bg-red-700 px-4 py-1.5 rounded-lg font-semibold text-sm opacity-50 cursor-not-allowed" disabled>
-          Stop RTT
-        </button>
+    <div class="flex gap-3 mt-8 flex-wrap">
+      <button id="join" class="modern-btn modern-btn-primary">
+        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        Join
+      </button>
+      <button id="leave" class="modern-btn modern-btn-danger opacity-50 cursor-not-allowed" disabled>
+        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+        Leave
+      </button>
+      <button id="start-trans" class="modern-btn modern-btn-success opacity-50 cursor-not-allowed" disabled>
+        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+        </svg>
+        Start RTT
+      </button>
+      <button id="stop-trans" class="modern-btn modern-btn-danger opacity-50 cursor-not-allowed" disabled>
+        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path>
+        </svg>
+        Stop RTT
+      </button>
     </div>
 
     <!-- Translation Control buttons (only visible when transcription is active) -->
-    <div id="translation-controls" class="flex gap-3 mt-4 hidden">
-      <div class="flex items-center gap-3">
-        <span class="text-sm text-gray-300">Translation:</span>
-        <span id="translation-status" class="text-sm font-medium text-gray-400">Disabled</span>
+    <div id="translation-controls" class="flex gap-3 mt-6 hidden items-center flex-wrap">
+      <div class="flex items-center gap-3 px-4 py-2 bg-slate-800/50 rounded-lg border border-slate-700/50">
+        <span class="text-sm text-slate-300">Translation:</span>
+        <span id="translation-status" class="text-sm font-medium text-cyan-400">Disabled</span>
       </div>
-      <button id="enable-translation" onclick="enableTranslationDuringSession()" class="bg-green-600 hover:bg-green-700 px-4 py-1.5 rounded-lg font-semibold text-sm">
+      <button id="enable-translation" onclick="enableTranslationDuringSession()" class="modern-btn modern-btn-success">
+        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
         Enable
       </button>
-      <button id="disable-translation" onclick="disableTranslationDuringSession()" class="bg-orange-600 hover:bg-orange-700 px-4 py-1.5 rounded-lg font-semibold text-sm">
+      <button id="disable-translation" onclick="disableTranslationDuringSession()" class="modern-btn modern-btn-warning">
+        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
         Disable
       </button>
-      <button onclick="showTranslationConfigModal()" class="bg-blue-600 hover:bg-blue-700 px-4 py-1.5 rounded-lg font-semibold text-sm">
+      <button onclick="showTranslationConfigModal()" class="modern-btn modern-btn-primary">
+        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
         Configure
       </button>
     </div>
 
     <!-- Connection Settings Modal -->
     <dialog id="connectionModal">
-      <h2 class="text-xl font-bold mb-6">Connection Settings</h2>
+      <div class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-700/50">
+        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path>
+          </svg>
+        </div>
+        <h2 class="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">Connection Settings</h2>
+      </div>
       
       <div class="space-y-4">
         <div>
@@ -128,10 +171,10 @@
 
         <div>
           <label class="block mb-2">User ID (optional)</label>
-          <div class="flex items-center gap-2">
-            <input id="uid" type="text" class="w-full bg-gray-800 rounded p-2" placeholder="Enter user ID">
-            <label class="flex items-center text-xs gap-1 ml-2">
-              <input id="uid-string" type="checkbox" class="mr-1 align-middle">
+          <div class="flex items-center gap-3">
+            <input id="uid" type="text" class="flex-1 bg-gray-800 rounded p-2" placeholder="Enter user ID">
+            <label class="flex items-center text-xs gap-1.5 whitespace-nowrap">
+              <input id="uid-string" type="checkbox" class="align-middle">
               Use string UID
             </label>
           </div>
@@ -141,13 +184,13 @@
       <div class="flex justify-end gap-4 mt-6">
         <button
           onclick="this.closest('dialog').close()"
-          class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded"
+          class="modern-btn modern-btn-secondary"
         >
           Cancel
         </button>
         <button 
           onclick="saveConnectionSettings()"
-          class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+          class="modern-btn modern-btn-primary"
         >
           Save
         </button>
@@ -155,11 +198,19 @@
     </dialog>
 
     <!-- STT Settings Modal -->
-    <dialog id="sttModal">
-      <h2 class="text-xl font-bold mb-8">STT Settings</h2>
+    <dialog id="sttModal" class="stt-settings-modal">
+      <div class="flex items-center gap-3 mb-8 pb-4 border-b border-slate-700/50">
+        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+        </div>
+        <h2 class="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent">STT Settings</h2>
+      </div>
       
       <!-- Inline alert for modal warnings -->
-      <div id="stt-modal-alert" class="hidden bg-red-600 text-white px-4 py-2 rounded mb-4"></div>
+      <div id="stt-modal-alert" class="hidden bg-gradient-to-r from-red-600 to-rose-600 text-white px-4 py-3 rounded-lg mb-4 border border-red-500/50 shadow-lg shadow-red-500/20"></div>
       <div class="space-y-6">
         <!-- Version Selection -->
         <div>
@@ -187,7 +238,7 @@
           <div id="speaking-languages" class="space-y-2">
             <div class="flex gap-2">
               <input type="text" class="flex-1 bg-gray-800 rounded p-2" value="en-US">
-              <button onclick="addLanguageInput('speaking-languages')" class="bg-blue-600 px-3 rounded">+</button>
+              <button onclick="addLanguageInput('speaking-languages')" class="modern-btn-icon">+</button>
             </div>
           </div>
           <p class="text-gray-400 text-sm mt-1">Maximum <span id="max-speaking-languages">2</span> speaking languages allowed</p>
@@ -210,7 +261,7 @@
               <div class="mb-4">
                 <div class="flex justify-between items-center mb-2">
                   <label class="block">Source Language</label>
-                  <button onclick="this.closest('.translation-pair').remove(); saveTranslationSettings();" class="text-red-500 text-sm">Remove Pair</button>
+                  <button onclick="this.closest('.translation-pair').remove(); saveTranslationSettings();" class="modern-btn-remove">Remove Pair</button>
         </div>
                 <input type="text" class="source-lang w-full bg-gray-800 rounded p-2" placeholder="e.g., en-US">
               </div>
@@ -218,12 +269,12 @@
                 <label class="block mb-2">Target Languages</label>
                 <div class="flex gap-2">
                   <input type="text" class="flex-1 bg-gray-800 rounded p-2" placeholder="Target language (e.g., es-ES)">
-                  <button onclick="addTargetLanguage(this)" class="bg-blue-600 px-3 rounded">+</button>
+                  <button onclick="addTargetLanguage(this)" class="modern-btn-icon">+</button>
                 </div>
               </div>
             </div>
           </div>
-          <button onclick="addTranslationPair()" class="mt-4 bg-blue-600 px-4 py-2 rounded">Add Translation Pair</button>
+          <button onclick="addTranslationPair()" class="mt-4 modern-btn modern-btn-primary">Add Translation Pair</button>
       </div>
 
         <!-- Bot Configuration -->
@@ -307,7 +358,7 @@
           <p class="text-gray-400 mb-4">Preview the request body that will be sent to start transcription:</p>
           <button 
             onclick="previewStartRequest()"
-            class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded mb-4"
+            class="modern-btn modern-btn-primary mb-4"
           >
             Preview Request
           </button>
@@ -316,7 +367,7 @@
               <label class="block">Request Body (JSON)</label>
               <button 
                 onclick="copyRequestToClipboard()"
-                class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm"
+                class="modern-btn modern-btn-success text-sm"
               >
                 Copy
               </button>
@@ -329,13 +380,13 @@
       <div class="flex justify-end gap-4 mt-8">
         <button 
           onclick="this.closest('dialog').close()"
-          class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded"
+          class="modern-btn modern-btn-secondary"
         >
           Cancel
         </button>
         <button 
           onclick="saveSTTSettings()"
-          class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+          class="modern-btn modern-btn-primary"
         >
           Save
         </button>
@@ -344,7 +395,14 @@
 
     <!-- Translation Configuration Modal -->
     <dialog id="translationConfigModal">
-      <h2 class="text-xl font-bold mb-6">Configure Translation Languages</h2>
+      <div class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-700/50">
+        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path>
+          </svg>
+        </div>
+        <h2 class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">Configure Translation Languages</h2>
+      </div>
       
       <div class="space-y-4">
         <p class="text-gray-400 mb-4">Configure translation language pairs for the current session:</p>
@@ -354,7 +412,7 @@
             <div class="mb-4">
               <div class="flex justify-between items-center mb-2">
                 <label class="block">Source Language</label>
-                <button onclick="this.closest('.translation-pair').remove();" class="text-red-500 text-sm">Remove Pair</button>
+                <button onclick="this.closest('.translation-pair').remove();" class="modern-btn-remove">Remove Pair</button>
               </div>
               <input type="text" class="source-lang w-full bg-gray-800 rounded p-2" placeholder="e.g., en-US">
             </div>
@@ -368,19 +426,19 @@
           </div>
         </div>
         
-        <button onclick="addSessionTranslationPair()" class="mt-4 bg-blue-600 px-4 py-2 rounded">Add Translation Pair</button>
+        <button onclick="addSessionTranslationPair()" class="mt-4 modern-btn modern-btn-primary">Add Translation Pair</button>
       </div>
 
       <div class="flex justify-end gap-4 mt-8">
         <button 
           onclick="this.closest('dialog').close()"
-          class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded"
+          class="modern-btn modern-btn-secondary"
         >
           Cancel
         </button>
         <button 
           onclick="updateTranslationLanguagesDuringSession()"
-          class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+          class="modern-btn modern-btn-primary"
         >
           Update/Enable Languages
         </button>
