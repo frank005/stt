@@ -20,334 +20,42 @@
   <script src="proto/protobuf.min.js"></script>
   <script src="proto/index.js"></script>
 
-  <style>
-    /* Modal styles */
-    dialog {
-      background: #1f2937;
-      color: white;
-      padding: 2rem;
-      border-radius: 1rem;
-      border: 1px solid #374151;
-      max-width: 90vw;
-      width: 800px;
-      margin: 2rem auto;
-      overflow-y: auto;
-      max-height: 90vh;
-    }
-    
-    dialog::backdrop {
-      background: rgba(0, 0, 0, 0.8);
-    }
-
-    dialog h2 {
-      padding: 0 1rem;  /* Add padding to title */
-      font-size: 1.25rem;
-      margin-bottom: 1.5rem;
-    }
-
-    /* Video container styles */
-    .video-container {
-      position: relative;
-      aspect-ratio: 16/9;
-      background: #000;
-      border-radius: 0.5rem;
-      overflow: hidden;
-      width: 100%;
-      max-width: 640px;
-      margin: 0 auto 1rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .video-container video {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-      display: block;
-    }
-
-    .transcription-overlay {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 1rem;
-      color: white;
-      z-index: 10;
-      width: 100%;
-      transition: opacity 0.3s ease;
-    }
-
-    .transcription-overlay.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-
-    /* Remote video grid - limit to 4 columns */
-    #remote-playerlist {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-      gap: 1rem;
-      width: 100%;
-    }
-
-    @media (min-width: 1024px) {
-      #remote-playerlist {
-        grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-        max-width: 100%;
-      }
-    }
-
-    .remote-video {
-      position: relative;
-      aspect-ratio: 16/9;
-      background: #000;
-      border-radius: 0.5rem;
-      overflow: hidden;
-      width: 100%;
-    }
-
-    .remote-video video {
-      width: 100%;
-      height: 100%;
-      object-fit: contain;
-    }
-
-    .remote-video .transcription-overlay {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      background: rgba(0, 0, 0, 0.7);
-      padding: 1rem;
-      color: white;
-      z-index: 10;
-    }
-
-    /* Popup styles */
-    .popupHidden {
-      display: none;
-    }
-
-    .popupShow {
-      position: fixed;
-      bottom: 2rem;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #2d2d2d;
-      color: white;
-      padding: 1rem 1.5rem;
-      border-radius: 0.5rem;
-      margin-bottom: 0.5rem;
-      box-shadow: 0 2px 6px rgba(0, 0, 0, 0.3);
-      animation: fadeInOut 0.3s ease-in-out;
-      z-index: 10000;
-    }
-
-    @keyframes fadeInOut {
-      0% { opacity: 0; transform: translate(-50%, 20px); }
-      100% { opacity: 1; transform: translate(-50%, 0); }
-    }
-
-    /* Input styles */
-    input[type="text"], input[type="number"] {
-      width: 100%;
-      padding: 0.5rem 0.75rem;
-      background: #374151 !important;
-      border: 1px solid #4B5563;
-      color: white !important;
-      border-radius: 0.5rem;
-      margin-top: 0.25rem;
-      font-size: 0.875rem;
-    }
-
-    input[type="text"]:disabled, input[type="number"]:disabled {
-      background: #1f2937 !important;
-      color: #6b7280 !important;
-      cursor: not-allowed;
-      opacity: 0.6;
-    }
-
-    input[type="text"]::placeholder {
-      color: #9CA3AF;
-    }
-
-    /* Modal section spacing */
-    .space-y-6 {
-      padding: 0 1rem;
-    }
-
-    .space-y-4 {
-      padding: 0 1rem;
-    }
-
-    .border-t {
-      border-color: #4B5563;
-      margin-top: 1.5rem;
-      padding-top: 1.5rem;
-    }
-
-    /* Modal labels */
-    label {
-      font-size: 0.875rem;
-      font-weight: 500;
-      color: #E5E7EB;
-    }
-
-    /* Modal buttons */
-    dialog button {
-      min-width: 80px;
-      padding: 0.5rem 1rem;
-      font-size: 0.875rem;
-    }
-
-    /* Update modal footer */
-    dialog .flex.justify-end {
-      margin: 1.5rem 0 0 0;  /* Remove negative margins */
-      padding: 1rem;
-      background: #161e2e;
-      border-top: 1px solid #374151;
-      width: 100%;
-    }
-
-    /* Content container inside dialog */
-    dialog > div:not(.flex) {
-      padding: 0 1rem;
-      margin-bottom: 1.5rem;
-    }
-
-    .translation-pair {
-      background: rgba(0, 0, 0, 0.2);
-      margin-bottom: 0.75rem;
-    }
-
-    .translation-pair:last-child {
-      margin-bottom: 0;
-    }
-
-    .translation-pair-modal {
-      background: rgba(0, 0, 0, 0.2);
-      margin-bottom: 0.75rem;
-    }
-
-    .translation-pair-modal:last-child {
-      margin-bottom: 0;
-    }
-
-    .target-languages {
-      border-top: 1px solid rgba(75, 85, 99, 0.4);
-      padding-top: 0.75rem;
-      margin-top: 0.75rem;
-    }
-
-    /* Fix grid alignment for translation pairs */
-    #translation-pairs {
-      display: flex;
-      flex-direction: column;
-      gap: 0.75rem;
-    }
-
-    /* Remove number input spinners */
-    input[type="number"]::-webkit-inner-spin-button,
-    input[type="number"]::-webkit-outer-spin-button {
-      -webkit-appearance: none;
-      margin: 0;
-    }
-
-    input[type="number"] {
-      -moz-appearance: textfield;
-    }
-
-    /* Fix grid alignment */
-    .settings-grid {
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 0.75rem;
-      margin-bottom: 0.75rem;
-    }
-
-    /* Remove any empty remote video containers */
-    .remote-video:empty {
-      display: none;
-    }
-
-    /* Update video container styles */
-    .video-wrapper {
-      margin-bottom: 1rem;
-    }
-
-    .language-selector {
-      margin-bottom: 0.5rem;
-      display: flex;
-      justify-content: flex-end;
-    }
-
-    .language-selector select {
-      font-size: 0.75rem;
-      padding: 0.25rem 0.5rem;
-    }
-
-    /* Remove empty containers */
-    .remote-video:empty,
-    #remote-playerlist:empty,
-    #remote-playerlist > div:empty,
-    .video-wrapper:empty {
-      display: none !important;
-    }
-
-    /* Translation controls styling */
-    #translation-controls {
-      transition: all 0.3s ease;
-      border-top: 1px solid #374151;
-      padding-top: 1rem;
-    }
-
-    #translation-controls button {
-      min-width: 80px;
-    }
-
-    /* Session translation modal styling */
-    #translationConfigModal {
-      background: #1f2937;
-      color: white;
-      padding: 2rem;
-      border-radius: 1rem;
-      border: 1px solid #374151;
-      max-width: 90vw;
-      width: 600px;
-      margin: 2rem auto;
-      overflow-y: auto;
-      max-height: 90vh;
-    }
-    
-    #translationConfigModal::backdrop {
-      background: rgba(0, 0, 0, 0.8);
-    }
-  </style>
+  <!-- Custom CSS -->
+  <link rel="stylesheet" href="css/styles.css">
 </head>
 
-<body class="bg-gray-900 text-white min-h-screen p-8">
+<body class="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white min-h-screen">
   <!-- Add popup section at the top of body -->
   <div id="popup-section" class="fixed bottom-4 left-1/2 transform -translate-x-1/2 z-50"></div>
 
   <div class="max-w-7xl mx-auto">
-    <div class="flex justify-between items-center mb-8">
-      <h1 class="text-2xl font-bold">Real-Time Transcription</h1>
+    <div class="flex justify-between items-center mb-10">
+      <div>
+        <h1 class="text-3xl font-bold bg-gradient-to-r from-cyan-400 via-blue-500 to-purple-500 bg-clip-text text-transparent mb-1">
+          Agora Real-Time Transcription & Translation
+        </h1>
+        <p class="text-slate-400 text-sm">Live speech-to-text and translation demo</p>
+      </div>
       
       <div class="flex gap-3 items-center">
         <button 
           onclick="document.getElementById('connectionModal').showModal()"
-          class="bg-blue-600 hover:bg-blue-700 px-4 py-1.5 rounded-lg font-semibold text-sm"
+          class="modern-btn modern-btn-primary"
         >
+          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path>
+          </svg>
           Connection Settings
         </button>
         
         <button 
           onclick="handleVersionChange();document.getElementById('sttModal').showModal();document.getElementById('request-preview').classList.add('hidden');"
-          class="bg-green-600 hover:bg-green-700 px-4 py-1.5 rounded-lg font-semibold text-sm"
+          class="modern-btn modern-btn-success"
         >
+          <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
           STT Settings
         </button>
 
@@ -366,13 +74,13 @@
     <div class="video-wrapper">
       <div class="language-selector">
         <select id="translation-lang-local" 
-                class="bg-gray-800 rounded px-2 py-1 text-sm" 
+                class="language-select-dropdown" 
                 onchange="updateTranslationView('local')">
         </select>
-        </div>
+      </div>
       <div class="video-container">
         <div id="local-player" class="w-full h-full"></div>
-        <div class="transcriptioncaps-overlay">
+        <div class="transcriptioncaps-overlay hidden">
           <div id="transcriptioncaps-local" class="text-xl mb-2"></div>
           <div id="translationcaps-local" class="text-gray-300"></div>
         </div>
@@ -383,41 +91,72 @@
     <div id="remote-playerlist" class="remote-grid"></div>
 
     <!-- Control buttons -->
-    <div class="flex gap-3 mt-6">
-      <button id="join" class="bg-blue-600 hover:bg-blue-700 px-4 py-1.5 rounded-lg font-semibold text-sm">
-          Join
-        </button>
-      <button id="leave" class="bg-red-600 hover:bg-red-700 px-4 py-1.5 rounded-lg font-semibold text-sm opacity-50 cursor-not-allowed" disabled>
-          Leave
-        </button>
-      <button id="start-trans" class="bg-green-600 hover:bg-green-700 px-4 py-1.5 rounded-lg font-semibold text-sm opacity-50 cursor-not-allowed" disabled>
-          Start RTT
-        </button>
-      <button id="stop-trans" class="bg-red-600 hover:bg-red-700 px-4 py-1.5 rounded-lg font-semibold text-sm opacity-50 cursor-not-allowed" disabled>
-          Stop RTT
-        </button>
+    <div class="flex gap-3 mt-8 flex-wrap">
+      <button id="join" class="modern-btn modern-btn-primary">
+        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+        </svg>
+        Join
+      </button>
+      <button id="leave" class="modern-btn modern-btn-danger opacity-50 cursor-not-allowed" disabled>
+        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
+        Leave
+      </button>
+      <button id="start-trans" class="modern-btn modern-btn-success opacity-50 cursor-not-allowed" disabled>
+        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z"></path>
+        </svg>
+        Start RTT
+      </button>
+      <button id="stop-trans" class="modern-btn modern-btn-danger opacity-50 cursor-not-allowed" disabled>
+        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 10a1 1 0 011-1h4a1 1 0 011 1v4a1 1 0 01-1 1h-4a1 1 0 01-1-1v-4z"></path>
+        </svg>
+        Stop RTT
+      </button>
     </div>
 
     <!-- Translation Control buttons (only visible when transcription is active) -->
-    <div id="translation-controls" class="flex gap-3 mt-4 hidden">
-      <div class="flex items-center gap-3">
-        <span class="text-sm text-gray-300">Translation:</span>
-        <span id="translation-status" class="text-sm font-medium text-gray-400">Disabled</span>
+    <div id="translation-controls" class="flex gap-3 mt-6 hidden items-center flex-wrap">
+      <div class="flex items-center gap-3 px-4 py-2 bg-slate-800/50 rounded-lg border border-slate-700/50">
+        <span class="text-sm text-slate-300">Translation:</span>
+        <span id="translation-status" class="text-sm font-medium text-cyan-400">Disabled</span>
       </div>
-      <button id="enable-translation" onclick="enableTranslationDuringSession()" class="bg-green-600 hover:bg-green-700 px-4 py-1.5 rounded-lg font-semibold text-sm">
+      <button id="enable-translation" onclick="enableTranslationDuringSession()" class="modern-btn modern-btn-success">
+        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"></path>
+        </svg>
         Enable
       </button>
-      <button id="disable-translation" onclick="disableTranslationDuringSession()" class="bg-orange-600 hover:bg-orange-700 px-4 py-1.5 rounded-lg font-semibold text-sm">
+      <button id="disable-translation" onclick="disableTranslationDuringSession()" class="modern-btn modern-btn-warning">
+        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+        </svg>
         Disable
       </button>
-      <button onclick="showTranslationConfigModal()" class="bg-blue-600 hover:bg-blue-700 px-4 py-1.5 rounded-lg font-semibold text-sm">
+      <button onclick="showTranslationConfigModal()" class="modern-btn modern-btn-primary">
+        <svg class="w-4 h-4 inline mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+        </svg>
         Configure
       </button>
     </div>
 
     <!-- Connection Settings Modal -->
     <dialog id="connectionModal">
-      <h2 class="text-xl font-bold mb-6">Connection Settings</h2>
+      <div class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-700/50">
+        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.111 16.404a5.5 5.5 0 017.778 0M12 20h.01m-7.08-7.071c3.904-3.905 10.236-3.905 14.141 0M1.394 9.393c5.857-5.857 15.355-5.857 21.213 0"></path>
+          </svg>
+        </div>
+        <h2 class="text-2xl font-bold bg-gradient-to-r from-cyan-400 to-blue-500 bg-clip-text text-transparent">Connection Settings</h2>
+      </div>
       
       <div class="space-y-4">
         <div>
@@ -432,10 +171,10 @@
 
         <div>
           <label class="block mb-2">User ID (optional)</label>
-          <div class="flex items-center gap-2">
-            <input id="uid" type="text" class="w-full bg-gray-800 rounded p-2" placeholder="Enter user ID">
-            <label class="flex items-center text-xs gap-1 ml-2">
-              <input id="uid-string" type="checkbox" class="mr-1 align-middle">
+          <div class="flex items-center gap-3">
+            <input id="uid" type="text" class="flex-1 bg-gray-800 rounded p-2" placeholder="Enter user ID">
+            <label class="flex items-center text-xs gap-1.5 whitespace-nowrap">
+              <input id="uid-string" type="checkbox" class="align-middle">
               Use string UID
             </label>
           </div>
@@ -445,13 +184,13 @@
       <div class="flex justify-end gap-4 mt-6">
         <button
           onclick="this.closest('dialog').close()"
-          class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded"
+          class="modern-btn modern-btn-secondary"
         >
           Cancel
         </button>
         <button 
           onclick="saveConnectionSettings()"
-          class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+          class="modern-btn modern-btn-primary"
         >
           Save
         </button>
@@ -459,11 +198,19 @@
     </dialog>
 
     <!-- STT Settings Modal -->
-    <dialog id="sttModal">
-      <h2 class="text-xl font-bold mb-8">STT Settings</h2>
+    <dialog id="sttModal" class="stt-settings-modal">
+      <div class="flex items-center gap-3 mb-8 pb-4 border-b border-slate-700/50">
+        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+          </svg>
+        </div>
+        <h2 class="text-2xl font-bold bg-gradient-to-r from-emerald-400 to-teal-500 bg-clip-text text-transparent">STT Settings</h2>
+      </div>
       
       <!-- Inline alert for modal warnings -->
-      <div id="stt-modal-alert" class="hidden bg-red-600 text-white px-4 py-2 rounded mb-4"></div>
+      <div id="stt-modal-alert" class="hidden bg-gradient-to-r from-red-600 to-rose-600 text-white px-4 py-3 rounded-lg mb-4 border border-red-500/50 shadow-lg shadow-red-500/20"></div>
       <div class="space-y-6">
         <!-- Version Selection -->
         <div>
@@ -491,7 +238,7 @@
           <div id="speaking-languages" class="space-y-2">
             <div class="flex gap-2">
               <input type="text" class="flex-1 bg-gray-800 rounded p-2" value="en-US">
-              <button onclick="addLanguageInput('speaking-languages')" class="bg-blue-600 px-3 rounded">+</button>
+              <button onclick="addLanguageInput('speaking-languages')" class="modern-btn-icon">+</button>
             </div>
           </div>
           <p class="text-gray-400 text-sm mt-1">Maximum <span id="max-speaking-languages">2</span> speaking languages allowed</p>
@@ -514,7 +261,7 @@
               <div class="mb-4">
                 <div class="flex justify-between items-center mb-2">
                   <label class="block">Source Language</label>
-                  <button onclick="this.closest('.translation-pair').remove(); saveTranslationSettings();" class="text-red-500 text-sm">Remove Pair</button>
+                  <button onclick="this.closest('.translation-pair').remove(); saveTranslationSettings();" class="modern-btn-remove">Remove Pair</button>
         </div>
                 <input type="text" class="source-lang w-full bg-gray-800 rounded p-2" placeholder="e.g., en-US">
               </div>
@@ -522,12 +269,12 @@
                 <label class="block mb-2">Target Languages</label>
                 <div class="flex gap-2">
                   <input type="text" class="flex-1 bg-gray-800 rounded p-2" placeholder="Target language (e.g., es-ES)">
-                  <button onclick="addTargetLanguage(this)" class="bg-blue-600 px-3 rounded">+</button>
+                  <button onclick="addTargetLanguage(this)" class="modern-btn-icon">+</button>
                 </div>
               </div>
             </div>
           </div>
-          <button onclick="addTranslationPair()" class="mt-4 bg-blue-600 px-4 py-2 rounded">Add Translation Pair</button>
+          <button onclick="addTranslationPair()" class="mt-4 modern-btn modern-btn-primary">Add Translation Pair</button>
       </div>
 
         <!-- Bot Configuration -->
@@ -611,7 +358,7 @@
           <p class="text-gray-400 mb-4">Preview the request body that will be sent to start transcription:</p>
           <button 
             onclick="previewStartRequest()"
-            class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded mb-4"
+            class="modern-btn modern-btn-primary mb-4"
           >
             Preview Request
           </button>
@@ -620,7 +367,7 @@
               <label class="block">Request Body (JSON)</label>
               <button 
                 onclick="copyRequestToClipboard()"
-                class="bg-green-600 hover:bg-green-700 px-3 py-1 rounded text-sm"
+                class="modern-btn modern-btn-success text-sm"
               >
                 Copy
               </button>
@@ -633,13 +380,13 @@
       <div class="flex justify-end gap-4 mt-8">
         <button 
           onclick="this.closest('dialog').close()"
-          class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded"
+          class="modern-btn modern-btn-secondary"
         >
           Cancel
         </button>
         <button 
           onclick="saveSTTSettings()"
-          class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+          class="modern-btn modern-btn-primary"
         >
           Save
         </button>
@@ -648,7 +395,14 @@
 
     <!-- Translation Configuration Modal -->
     <dialog id="translationConfigModal">
-      <h2 class="text-xl font-bold mb-6">Configure Translation Languages</h2>
+      <div class="flex items-center gap-3 mb-6 pb-4 border-b border-slate-700/50">
+        <div class="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+          <svg class="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12M9 3v2m1.048 9.5A18.022 18.022 0 016.412 9m6.088 9h7M11 21l5-10 5 10M12.751 5C11.783 10.77 8.07 15.61 3 18.129"></path>
+          </svg>
+        </div>
+        <h2 class="text-2xl font-bold bg-gradient-to-r from-purple-400 to-pink-500 bg-clip-text text-transparent">Configure Translation Languages</h2>
+      </div>
       
       <div class="space-y-4">
         <p class="text-gray-400 mb-4">Configure translation language pairs for the current session:</p>
@@ -658,7 +412,7 @@
             <div class="mb-4">
               <div class="flex justify-between items-center mb-2">
                 <label class="block">Source Language</label>
-                <button onclick="this.closest('.translation-pair').remove();" class="text-red-500 text-sm">Remove Pair</button>
+                <button onclick="this.closest('.translation-pair').remove();" class="modern-btn-remove">Remove Pair</button>
               </div>
               <input type="text" class="source-lang w-full bg-gray-800 rounded p-2" placeholder="e.g., en-US">
             </div>
@@ -672,19 +426,19 @@
           </div>
         </div>
         
-        <button onclick="addSessionTranslationPair()" class="mt-4 bg-blue-600 px-4 py-2 rounded">Add Translation Pair</button>
+        <button onclick="addSessionTranslationPair()" class="mt-4 modern-btn modern-btn-primary">Add Translation Pair</button>
       </div>
 
       <div class="flex justify-end gap-4 mt-8">
         <button 
           onclick="this.closest('dialog').close()"
-          class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded"
+          class="modern-btn modern-btn-secondary"
         >
           Cancel
         </button>
         <button 
           onclick="updateTranslationLanguagesDuringSession()"
-          class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded"
+          class="modern-btn modern-btn-primary"
         >
           Update/Enable Languages
         </button>
@@ -692,1464 +446,14 @@
     </dialog>
   </div>
 
-<script>
-// Initialize variables
-var client;
-var options = {
-  appid: null,
-  channel: null,
-  uid: null,
-  token: null
-};
-
-let transcribeIndex = 0;
-let translateIndex = 0;
-let localTrack = null;
-var localAudioTrack = null;
-
-// Add these variables
-let taskId = '';
-let tokenName = '';
-const gatewayAddress = "https://api.agora.io";
-let sttVersion = "7.x"; // Default to 7.x
-let translationEnabled = false; // Track translation state
-
-// Keep track of available languages for each user
-const userLanguages = new Map(); // uid -> { speaking: string, translations: Set<string> }
-
-// Add timeout tracking variables
-const overlayTimeouts = new Map(); // uid -> timeout
-const OVERLAY_HIDE_DELAY = 5000; // 5 seconds
-
-// Initialize AgoraRTC client
-if (!client) {
-  client = AgoraRTC.createClient({
-    mode: "live",
-    codec: "vp8",
-    role: "host"
-  });
-}
-
-// Load saved settings on page load
-$(document).ready(function() {
-  updateButtonStates('initial');
-  loadSavedSettings();
-  // Apply version-specific UI changes after settings are loaded
-  handleVersionChange();
-  
-  // COMMENTED OUT: Event listeners for auto-sync behavior
-  /*
-  // Add event listeners for pub bot fields to sync with sub bot fields in 7.x
-  $("#pusher-uid, #pusher-token").on('input', function() {
-    if (sttVersion === "7.x") {
-      const fieldId = $(this).attr('id');
-      const value = $(this).val();
-      
-      if (fieldId === 'pusher-uid') {
-        $("#puller-uid").val(value);
-      } else if (fieldId === 'pusher-token') {
-        $("#puller-token").val(value);
-      }
-    }
-  });
-  */
-});
-
-function loadSavedSettings() {
-  // Load connection settings
-  const savedConnection = JSON.parse(localStorage.getItem('connectionSettings') || '{}');
-  if (savedConnection.appid) {
-    $("#appid").val(savedConnection.appid);
-    options.appid = savedConnection.appid;
-  }
-  if (savedConnection.channel) {
-    $("#channel").val(savedConnection.channel);
-    options.channel = savedConnection.channel;
-  }
-  if (savedConnection.uid !== undefined) {
-    $("#uid").val(savedConnection.uid);
-  }
-  if (savedConnection.uidString) {
-    $("#uid-string").prop('checked', true);
-  } else {
-    $("#uid-string").prop('checked', false);
-  }
-
-  // Load STT settings
-  const savedSTT = JSON.parse(localStorage.getItem('sttSettings') || '{}');
-  if (savedSTT.key) $("#key").val(savedSTT.key);
-  if (savedSTT.secret) $("#secret").val(savedSTT.secret);
-  if (savedSTT.version) {
-    $("#stt-version").val(savedSTT.version);
-    sttVersion = savedSTT.version;
-  }
-  if (savedSTT.maxIdleTime) $("#max-idle-time").val(savedSTT.maxIdleTime);
-  if (savedSTT.speakingLanguage) $("#speaking-language").val(savedSTT.speakingLanguage);
-  if (savedSTT.translationLanguage) $("#translation-language").val(savedSTT.translationLanguage);
-}
-
-// Save settings functions
-function saveConnectionSettings() {
-  options.appid = $("#appid").val();
-    options.channel = $("#channel").val();
-  const uidVal = $("#uid").val();
-  const uidString = $("#uid-string").is(":checked");
-  options.uid = uidVal !== '' ? (uidString ? uidVal : parseInt(uidVal, 10)) : null;
-  
-  // Save to localStorage
-  localStorage.setItem('connectionSettings', JSON.stringify({
-    appid: options.appid,
-    channel: options.channel,
-    uid: uidVal,
-    uidString: uidString
-  }));
-  
-  document.getElementById('connectionModal').close();
-  showPopup("Connection settings saved");
-}
-
-function saveSTTSettings() {
-  const speakingLanguages = Array.from(document.querySelectorAll('#speaking-languages input'))
-    .map(input => input.value)
-    .filter(value => value.trim() !== '');
-
-  localStorage.setItem('sttSettings', JSON.stringify({
-    key: $("#key").val(),
-    secret: $("#secret").val(),
-    speakingLanguages: speakingLanguages,
-    version: $("#stt-version").val(),
-    maxIdleTime: $("#max-idle-time").val()
-  }));
-  
-  document.getElementById('sttModal').close();
-  showPopup("STT settings saved");
-}
-
-// Get authorization
-function GetAuthorization() {
-  const customerKey = $("#key").val();
-  const customerSecret = $("#secret").val();
-  if (!customerKey || !customerSecret) {
-    showPopup("Please configure STT settings first");
-    return "";
-  }
-  return `Basic ${btoa(`${customerKey}:${customerSecret}`)}`;
-}
-
-// Acquire token
-async function acquireToken() {
-  if (sttVersion === "7.x") {
-    // For 7.x, we don't need to acquire token separately
-    return { tokenName: null };
-  }
-
-  const url = `${gatewayAddress}/v1/projects/${options.appid}/rtsc/speech-to-text/builderTokens`;
-  const data = { instanceId: options.channel };
-  let res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": GetAuthorization()
-    },
-    body: JSON.stringify(data)
-  });
-  if (res.status == 200) {
-    res = await res.json();
-    return res;
-  } else {
-    throw new Error(`Failed to acquire token: ${res.status}`);
-  }
-}
-
-// Update the subscribe function to include transcription overlay
-async function subscribe(user, mediaType) {
-  const uid = user.uid;
-  await client.subscribe(user, mediaType);
-  console.log(`[${new Date().toLocaleTimeString()}] Subscribed to ${uid} for ${mediaType}`);
-  
-  if (mediaType === "video") {
-    // Remove any existing container for this user first
-    $(`#video-wrapper-${uid}`).remove();
-    
-    const player = $(`
-      <div id="video-wrapper-${uid}" class="video-wrapper">
-        <div class="language-selector">
-          <select id="translation-lang-${uid}" 
-                  class="bg-gray-800 rounded px-2 py-1 text-sm" 
-                  onchange="updateTranslationView('${uid}')">
-          </select>
-        </div>
-        <div class="video-container">
-          <div id="player-${uid}" class="w-full h-full"></div>
-          <div class="transcription-overlay">
-            <div id="transcriptioncaps-${uid}" class="text-xl mb-2"></div>
-            <div id="translationcaps-${uid}" class="text-gray-300"></div>
-          </div>
-        </div>
-      </div>
-    `);
-    $("#remote-playerlist").append(player);
-    user.videoTrack.play(`player-${uid}`);
-    updateLanguageSelector(uid);
-  }
-  if (mediaType === "audio") {
-    user.audioTrack.play();
-  }
-}
-
-// Update stream message handler
-client.on("stream-message", function(uid, data) {
-  try {
-    const Text = $protobufRoot.lookup("agora.audio2text.Text");
-    const msg = Text.decode(data);
-    
-    // Show overlay whenever a message is received
-    showOverlay(msg.uid);
-    
-    // Get current timestamp
-    const timestamp = new Date().toLocaleTimeString();
-    
-    if (msg.data_type === "transcribe" && msg.words && msg.words.length) {
-      const text = msg.words.map(word => word.text).join("");
-      $(`#video-wrapper-${msg.uid} #transcriptioncaps-${msg.uid}`).text(text);
-      console.log(`[${timestamp}] Transcription from ${msg.uid}: ${text}`);
-      addTranscribeItem(msg.uid, text);
-    } 
-    else if (msg.data_type === "translate" && msg.trans && msg.trans.length) {
-      const selectedLang = $(`#translation-lang-${msg.uid}`).val();
-      const translation = msg.trans.find(t => t.lang === selectedLang);
-      if (translation) {
-        const text = translation.texts.join("");
-        $(`#video-wrapper-${msg.uid} #translationcaps-${msg.uid}`).text(text);
-        console.log(`[${timestamp}] Translation (${selectedLang}) from ${msg.uid}: ${text}`);
-        addTranslateItem(msg.uid, text);
-      }
-    }
-  } catch (error) {
-    console.error("Error handling stream message:", error);
-  }
-});
-
-// Update remote video handling
-client.on("user-published", async function(user, mediaType) {
-  await client.subscribe(user, mediaType);
-  
-  if (mediaType === "video") {
-    // Check if container already exists and remove any duplicates
-    const existingContainers = $(`[id^="video-wrapper-${user.uid}"]`);
-    if (existingContainers.length) {
-      // Keep only the first container and remove others
-      existingContainers.slice(1).remove();
-      // If first container already has video playing, just return
-      if ($(`#player-${user.uid} video`).length) {
-        return;
-      }
-    }
-
-    // Remove any orphaned player divs
-    $(`#player-${user.uid}`).not(`#video-wrapper-${user.uid} #player-${user.uid}`).remove();
-
-    const playerContainer = $(`
-      <div id="video-wrapper-${user.uid}" class="video-wrapper">
-        <div class="language-selector">
-          <select id="translation-lang-${user.uid}" 
-                  class="bg-gray-800 rounded px-2 py-1 text-sm" 
-                  onchange="updateTranslationView('${user.uid}')">
-          </select>
-        </div>
-        <div class="remote-video">
-          <div id="player-${user.uid}" class="w-full h-full"></div>
-          <div class="transcription-overlay">
-            <div id="transcriptioncaps-${user.uid}" class="text-xl mb-2"></div>
-            <div id="translationcaps-${user.uid}" class="text-gray-300"></div>
-          </div>
-        </div>
-      </div>
-    `);
-
-    // Only append if container doesn't exist
-    if (!$(`#video-wrapper-${user.uid}`).length) {
-      $("#remote-playerlist").append(playerContainer);
-    }
-    
-    user.videoTrack.play(`player-${user.uid}`);
-    updateLanguageSelector(user.uid);
-  }
-  
-  if (mediaType === "audio") {
-    user.audioTrack.play();
-  }
-});
-
-// Update language selector to show all configured target languages
-function updateLanguageSelector(uid) {
-  const selector = $(`#translation-lang-${uid}`);
-  const currentSelection = selector.val();
-  
-  // Get all configured target languages from settings, consolidating by source
-  const consolidatedPairs = {};
-  translationSettings.pairs.forEach(pair => {
-    if (!consolidatedPairs[pair.source]) {
-      consolidatedPairs[pair.source] = [];
-    }
-    pair.targets.forEach(target => {
-      if (!consolidatedPairs[pair.source].includes(target)) {
-        consolidatedPairs[pair.source].push(target);
-      }
-    });
-  });
-  
-  // Create options from consolidated pairs
-  const allTargetLanguages = Object.entries(consolidatedPairs).reduce((acc, [source, targets]) => {
-    targets.forEach(target => {
-      acc.push({ source, target });
-    });
-    return acc;
-  }, []);
-
-  selector.empty();
-  allTargetLanguages.forEach(({ source, target }) => {
-    const option = $(`<option value="${target}">${source} ? ${target}</option>`);
-    selector.append(option);
-  });
-
-  // Restore previous selection or select first option
-  if (currentSelection && selector.find(`option[value="${currentSelection}"]`).length) {
-    selector.val(currentSelection);
-  } else {
-    selector.find('option:first').prop('selected', true);
-  }
-
-  // Log current selection for debugging
-  console.log(`Language selector for ${uid} set to:`, selector.val());
-}
-
-// Update startTranscription to handle multiple languages
-async function startTranscription() {
-  const authorization = GetAuthorization();
-  if (!authorization) {
-    throw new Error("key or secret is empty");
-  }
-
-  const data = await acquireToken();
-  tokenName = data.tokenName;
-
-  // Build request body using the shared function
-  const body = buildStartRequestBody();
-
-  console.log("Starting transcription with body:", body);
-
-  // Determine URL based on version
-  let url;
-  if (sttVersion === "7.x") {
-    url = `${gatewayAddress}/api/speech-to-text/v1/projects/${options.appid}/join`;
-  } else {
-    url = `${gatewayAddress}/v1/projects/${options.appid}/rtsc/speech-to-text/tasks?builderToken=${tokenName}`;
-  }
-
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": authorization
-    },
-    body: JSON.stringify(body)
-  });
-
-  const responseText = await res.text();
-  let responseData;
-  try {
-    responseData = JSON.parse(responseText);
-  } catch (e) {
-    responseData = { message: responseText };
-  }
-
-  if (!res.ok) {
-    if (res.status === 409 && responseData.taskId) {
-      taskId = responseData.taskId;
-      updateButtonStates('transcribing');
-      return { taskId };
-    }
-    throw new Error(responseData.message || `HTTP error ${res.status}`);
-  }
-
-  // Handle different response formats based on version
-  if (sttVersion === "7.x") {
-    if (!responseData.agent_id) {
-      throw new Error("No agent_id received from server");
-    }
-    taskId = responseData.agent_id;
-    // You might want to handle different status codes here
-    if (responseData.status !== "RUNNING") {
-      throw new Error(`Unexpected status: ${responseData.status}`);
-    }
-  } else {
-    if (!responseData.taskId) {
-      throw new Error("No taskId received from server");
-    }
-    taskId = responseData.taskId;
-  }
-
-  updateButtonStates('transcribing');
-  
-  // Check if translation was enabled in the initial request
-  if (body.translateConfig && body.translateConfig.enable) {
-    translationEnabled = true;
-  } else {
-    translationEnabled = false;
-  }
-  updateTranslationStatus();
-  
-  return responseData;
-}
-
-// Update stopTranscription to handle button states
-async function stopTranscription() {
-  if (!taskId) return;
-  
-  // Determine URL and method based on version
-  let url;
-  let method;
-  if (sttVersion === "7.x") {
-    url = `${gatewayAddress}/api/speech-to-text/v1/projects/${options.appid}/agents/${taskId}/leave`;
-    method = 'POST';
-  } else {
-    url = `${gatewayAddress}/v1/projects/${options.appid}/rtsc/speech-to-text/tasks/${taskId}?builderToken=${tokenName}`;
-    method = 'DELETE';
-  }
-  
-  await fetch(url, {
-    method: method,
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": GetAuthorization()
-    }
-  });
-  
-  taskId = null;
-  translationEnabled = false;
-  $("#enable-translation").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
-  $("#disable-translation").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
-  $("#translation-controls").addClass('hidden');
-  updateButtonStates('joined');
-  
-  // Clear all transcriptions captions
-  $("[id^=transcriptioncaps-]").text("");
-  $("[id^=translationcaps-]").text("");
-}
-
-// Update button state management
-function updateButtonStates(state) {
-  switch(state) {
-    case 'initial':
-      $("#join").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
-      $("#leave").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
-      $("#start-trans").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
-      $("#stop-trans").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
-      $("#translation-controls").addClass('hidden');
-      break;
-    case 'joined':
-      $("#join").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
-      $("#leave").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
-      $("#start-trans").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
-      $("#stop-trans").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
-      $("#translation-controls").addClass('hidden');
-      break;
-    case 'transcribing':
-      $("#start-trans").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
-      $("#stop-trans").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
-      // Always show translation controls when transcribing, regardless of translation state
-      $("#translation-controls").removeClass('hidden');
-      $("#enable-translation").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
-      $("#disable-translation").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
-      break;
-  }
-}
-
-// Update join handler
-$("#join").click(async function() {
-  if (!options.appid || !options.channel) {
-    showPopup("Please configure connection settings first");
-    return;
-  }
-  // Get UID and type from input and checkbox
-  const uidVal = $("#uid").val();
-  const uidString = $("#uid-string").is(":checked");
-  let joinUid = null;
-  if (uidVal !== '') {
-    joinUid = uidString ? uidVal : parseInt(uidVal, 10);
-    if (!uidString && isNaN(joinUid)) joinUid = null;
-  }
-  try {
-    options.uid = await client.join(options.appid, options.channel, null, joinUid);
-    console.log("Joined with UID:", options.uid);
-    
-    const [audioTrack, videoTrack] = await AgoraRTC.createMicrophoneAndCameraTracks();
-    localTrack = videoTrack;
-    localAudioTrack = audioTrack;
-    
-    await client.publish([audioTrack, videoTrack]);
-    
-    // Setup local video container with proper translation UI
-    const localContainer = $(`
-      <div id="video-wrapper-${options.uid}" class="video-wrapper">
-        <div class="language-selector">
-          <select id="translation-lang-${options.uid}" 
-                  class="bg-gray-800 rounded px-2 py-1 text-sm" 
-                  onchange="updateTranslationView('${options.uid}')">
-          </select>
-        </div>
-        <div class="video-container">
-          <div id="local-player" class="w-full h-full"></div>
-          <div class="transcription-overlay">
-            <div id="transcriptioncaps-${options.uid}" class="text-xl mb-2"></div>
-            <div id="translationcaps-${options.uid}" class="text-gray-300"></div>
-          </div>
-        </div>
-      </div>
-    `);
-
-    // Replace existing local player
-    $("#local-player").parent().parent().replaceWith(localContainer);
-    videoTrack.play("local-player");
-    
-    // Initialize language selector for local user
-    updateLanguageSelector(options.uid);
-    
-    updateButtonStates('joined');
-    //in case RTT was started first, adjust Start RTT and Stop RTT buttons states
-    if (taskId) {
-      $("#start-trans").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
-      $("#stop-trans").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
-      $("#translation-controls").removeClass('hidden');
-    }
-    showPopup("Joined channel successfully");
-  } catch (error) {
-    console.error(error);
-    showPopup("Failed to join channel: " + error.message);
-  }
-});
-
-// Update leave handler
-$("#leave").click(async function() {
-  try {
-    // Clear all timeouts including local user
-    overlayTimeouts.forEach((timeout, uid) => {
-      clearTimeout(timeout);
-    });
-    overlayTimeouts.clear();
-    
-    // Hide all overlays
-    $(`.transcription-overlay`).addClass('hidden');
-    
-    if (localTrack) {
-      localTrack.stop();
-      localTrack.close();
-    }
-    if (localAudioTrack) {
-      localAudioTrack.stop();
-      localAudioTrack.close();
-    }
-    await client.leave();
-    $("#local-player").empty();
-    $("#remote-playerlist").empty();
-    
-    updateButtonStates('initial');
-    //account for RTT task still running after leaving
-    if (taskId) {
-      $("#start-trans").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
-      $("#stop-trans").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
-      $("#translation-controls").addClass('hidden');
-    }
-    showPopup("Left channel successfully");
-  } catch (error) {
-    console.error(error);
-    showPopup("Failed to leave channel");
-  }
-});
-
-// Show popup notification
-var popups = 0;
-
-function showPopup(message) {
-  const newPopup = popups + 1;
-  console.log(`Popup count: ${newPopup}`);
-  const y = $(`<div id="popup-${newPopup}" class="popupHidden">${message}</div>`);
-  $("#popup-section").append(y);
-  const x = document.getElementById(`popup-${newPopup}`);
-  x.className = "popupShow";
-  const z = popups * 10;
-  $(`#popup-${newPopup}`).css("left", `${50 + z}%`);
-  popups++;
-  setTimeout(function() {
-    $(`#popup-${newPopup}`).remove();
-    popups--;
-  }, 3000);
-}
-
-// Update user-unpublished handler to be more thorough
-client.on("user-unpublished", function(user) {
-  // Clear timeout if exists
-  if (overlayTimeouts.has(user.uid)) {
-    clearTimeout(overlayTimeouts.get(user.uid));
-    overlayTimeouts.delete(user.uid);
-  }
-  
-  // Remove elements
-  $(`[id^="video-wrapper-${user.uid}"]`).remove();
-  $(`[id^="player-${user.uid}"]`).remove();
-});
-
-// Update the start-trans click handler
-$("#start-trans").click(async function() {
-  try {
-    if (!$("#key").val() || !$("#secret").val()) {
-      showPopup("Please configure STT settings first");
-      document.getElementById('sttModal').showModal();
-      return;
-    }
-
-    if (!options.appid || !options.channel) {
-      showPopup("Please configure connection settings first");
-      document.getElementById('connectionModal').showModal();
-      return;
-    }
-
-    $("#start-trans").prop('disabled', true);
-    await startTranscription();
-    showPopup("Started transcription");
-  } catch (error) {
-    console.error(error);
-    showPopup(error.message || "Failed to start transcription");
-    $("#start-trans").prop('disabled', false);
-  }
-});
-
-// Update the stop-trans click handler
-$("#stop-trans").click(async function() {
-  try {
-    $("#stop-trans").prop('disabled', true);
-    await stopTranscription();
-    $("#start-trans").prop('disabled', false);
-    showPopup("Stopped transcription");
-  } catch (error) {
-    console.error(error);
-    showPopup("Failed to stop transcription");
-    $("#stop-trans").prop('disabled', false);
-  }
-});
-
-// Add helper functions for transcription display
-function addTranscribeItem(uid, text) {
-  const timestamp = new Date().toLocaleTimeString();
-  const itemId = `transcribecaps-${uid}-${transcribeIndex}`;
-  
-  if ($(`#${itemId}`)[0]) {
-    $(`#${itemId} .msg`).html(text);
-  } else {
-    const $item = $(`
-      <div class="item" id="${itemId}">
-        <span class="timestamp">[${timestamp}]</span>
-        <span class="uid">${uid}</span>:
-        <span class="msg">${text}</span>
-      </div>
-    `);
-    $("#stt-transcribe .content").prepend($item);
-  }
-}
-
-function addTranslateItem(uid, text) {
-  const timestamp = new Date().toLocaleTimeString();
-  const itemId = `translatecaps-${uid}-${translateIndex}`;
-  
-  if ($(`#${itemId}`)[0]) {
-    $(`#${itemId} .msg`).html(text);
-  } else {
-    const $item = $(`
-      <div class="item" id="${itemId}">
-        <span class="timestamp">[${timestamp}]</span>
-        <span class="uid">${uid}</span>:
-        <span class="msg">${text}</span>
-      </div>
-    `);
-    $("#stt-translate .content").append($item);
-  }
-}
-
-// Update speaking languages input
-function addLanguageInput(containerId) {
-  const container = document.getElementById(containerId);
-  const maxLanguages = sttVersion === "7.x" ? 4 : 2;
-  const currentInputs = Array.from(container.querySelectorAll('input')).map(input => input.value);
-  if (currentInputs.length >= maxLanguages) {
-    showPopup(`Maximum ${maxLanguages} speaking languages allowed for ${sttVersion}`);
-    return;
-  }
-  currentInputs.push("");
-  renderSpeakingLanguagesInputs(currentInputs, maxLanguages);
-}
-
-function addTargetLanguage(btn) {
-  const container = btn.parentElement;
-  if (container.children.length >= 6) { // Max 5 target languages + button
-    showPopup("Maximum 5 target languages allowed per source");
-    return;
-  }
-  
-  const div = document.createElement('div');
-  div.className = 'flex gap-2';
-  div.innerHTML = `
-    <input type="text" class="flex-1 bg-gray-800 rounded p-2" placeholder="Target language">
-    <button onclick="this.parentElement.remove()" class="bg-red-600 px-3 rounded">-</button>
-  `;
-  // Insert before the "Add Target Language" button
-  btn.parentNode.insertBefore(div, btn);
-}
-
-function addTranslationPair() {
-  const container = document.getElementById('translation-pairs');
-  const maxPairs = sttVersion === "7.x" ? 4 : 2;
-  
-  if (container.children.length >= maxPairs) {
-    showSTTModalAlert(`Maximum ${maxPairs} source languages allowed for ${sttVersion}`);
-    return;
-  }
-  
-  const div = document.createElement('div');
-  div.className = 'translation-pair border border-gray-700 p-4 rounded';
-  div.innerHTML = `
-    <div class="mb-4">
-      <div class="flex justify-between items-center mb-2">
-        <label class="block">Source Language</label>
-        <button onclick="this.closest('.translation-pair').remove(); saveTranslationSettings();" class="text-red-500 text-sm">Remove Pair</button>
-      </div>
-      <input type="text" class="source-lang w-full bg-gray-800 rounded p-2" placeholder="e.g., en-US">
-    </div>
-    <div class="target-languages space-y-2">
-      <label class="block mb-2">Target Languages</label>
-      <button onclick="addTargetLanguage(this)" class="bg-blue-600 px-3 py-2 rounded w-full">Add Target Language</button>
-    </div>
-  `;
-  container.appendChild(div);
-  saveTranslationSettings();
-}
-
-// Store translation settings
-let translationSettings = {
-  pairs: []
-};
-
-// Function to save translation settings
-function saveTranslationSettings() {
-  translationSettings.pairs = Array.from(document.querySelectorAll('.translation-pair')).map(pair => ({
-    source: pair.querySelector('.source-lang').value,
-    targets: Array.from(pair.querySelectorAll('.target-languages input'))
-      .map(input => input.value)
-      .filter(value => value.trim() !== '')
-  })).filter(pair => pair.source && pair.targets.length > 0);
-
-  localStorage.setItem('translationSettings', JSON.stringify(translationSettings));
-  updateAllLanguageSelectors();
-}
-
-// Function to load translation settings
-function loadTranslationSettings() {
-  // Load speaking languages
-  const savedSTT = JSON.parse(localStorage.getItem('sttSettings') || '{}');
-  const maxLanguages = sttVersion === "7.x" ? 4 : 2;
-  let languages = ["en-US"];
-  if (savedSTT.speakingLanguages) {
-    languages = savedSTT.speakingLanguages.slice(0, maxLanguages);
-  }
-  renderSpeakingLanguagesInputs(languages, maxLanguages);
-
-  // Load translation settings
-  const saved = localStorage.getItem('translationSettings');
-  const container = document.getElementById('translation-pairs');
-  
-  // Only clear if we're actually loading settings (not just checking)
-  if (saved) {
-    container.innerHTML = ''; // Clear existing
-    console.log("Loading translation settings from localStorage");
-  }
-
-  if (saved) {
-    translationSettings = JSON.parse(saved);
-    const maxPairs = sttVersion === "7.x" ? 4 : 2;
-    const pairs = translationSettings.pairs.slice(0, maxPairs);
-    
-    pairs.forEach(pair => {
-      const div = document.createElement('div');
-      div.className = 'translation-pair border border-gray-700 p-4 rounded';
-      div.innerHTML = `
-        <div class="mb-4">
-          <div class="flex justify-between items-center mb-2">
-            <label class="block">Source Language</label>
-            <button onclick="this.closest('.translation-pair').remove()" class="text-red-500 text-sm">Remove Pair</button>
-          </div>
-          <input type="text" class="source-lang w-full bg-gray-800 rounded p-2" value="${pair.source}">
-        </div>
-        <div class="target-languages space-y-2">
-          <label class="block mb-2">Target Languages</label>
-          ${pair.targets.map(target => `
-            <div class="flex gap-2">
-              <input type="text" class="flex-1 bg-gray-800 rounded p-2" value="${target}">
-              <button onclick="this.parentElement.remove()" class="bg-red-600 px-3 rounded">-</button>
-            </div>
-          `).join('')}
-          <button onclick="addTargetLanguage(this)" class="bg-blue-600 px-3 py-2 rounded w-full">Add Target Language</button>
-        </div>
-      `;
-      container.appendChild(div);
-    });
-  }
-
-  // Only create empty pair if there are no pairs at all
-  if (container.children.length === 0) {
-    addTranslationPair();
-  }
-
-  updateAllLanguageSelectors();
-}
-
-// Function to update all language selectors
-function updateAllLanguageSelectors() {
-  const selectors = document.querySelectorAll('[id^="translation-lang-"]');
-  selectors.forEach(selector => {
-    updateLanguageSelector(selector.id.replace('translation-lang-', ''));
-  });
-}
-
-// Fix updateTranslationView function
-function updateTranslationView(uid) {
-  const selectedLang = $(`#translation-lang-${uid}`).val();
-  localStorage.setItem(`translation-pref-${uid}`, selectedLang);
-  $(`#translationcaps-${uid}`).text(''); // Clear current translation
-}
-
-// Load settings on page load
-document.addEventListener('DOMContentLoaded', loadTranslationSettings);
-
-// Save settings when STT modal is closed
-document.getElementById('sttModal').addEventListener('close', saveTranslationSettings);
-
-// Real-time translation control functions
-async function updateTaskConfiguration(updateMask, body) {
-  if (!taskId) {
-    throw new Error("No active task to update");
-  }
-  
-  let url;
-  let method;
-  let sequenceId = Date.now(); // Simple sequence ID based on timestamp
-  
-  if (sttVersion === "7.x") {
-    url = `${gatewayAddress}/api/speech-to-text/v1/projects/${options.appid}/agents/${taskId}/update?sequenceId=${sequenceId}&updateMask=${updateMask}`;
-    method = 'POST';
-  } else {
-    url = `${gatewayAddress}/v1/projects/${options.appid}/rtsc/speech-to-text/tasks/${taskId}?builderToken=${tokenName}&sequenceId=${sequenceId}&updateMask=${updateMask}`;
-    method = 'PATCH';
-  }
-  
-  const response = await fetch(url, {
-    method: method,
-    headers: {
-      "Content-Type": "application/json",
-      "Authorization": GetAuthorization()
-    },
-    body: JSON.stringify(body)
-  });
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(`Failed to update task: ${response.status} - ${errorText}`);
-  }
-  
-  return await response.json();
-}
-
-// Function to disable translation during active session
-async function disableTranslationDuringSession() {
-  try {
-    if (!taskId) {
-      showPopup("No active transcription session");
-      return;
-    }
-    
-    const updateMask = "translateConfig.enable";
-    const body = {
-      translateConfig: {
-        enable: false
-      }
-    };
-    
-    await updateTaskConfiguration(updateMask, body);
-    
-    // Update translation state
-    translationEnabled = false;
-    updateTranslationStatus();
-    
-    // Clear only translation display overlays (not translation pairs in settings)
-    $("[id^=translationcaps-]").filter(function() {
-      return this.id.match(/^translationcaps-\d+$/);
-    }).text("");
-    
-    $("#enable-translation").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
-    $("#disable-translation").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
-    showPopup("Translation disabled during session");
-    
-    // Ensure translation controls remain visible
-    setTimeout(() => {
-      if (taskId) {
-        $("#translation-controls").removeClass('hidden');
-        console.log("Translation controls should be visible now");
-        // Clear only translation display overlays (not translation pairs in settings) with timeout, sometime RTM message arrives after task is stopped
-        $("[id^=translationcaps-]").filter(function() {
-        return this.id.match(/^translationcaps-\d+$/);
-    }).text("");
-      }
-    }, 300);
-  } catch (error) {
-    console.error("Error disabling translation:", error);
-    showPopup("Failed to disable translation: " + error.message);
-  }
-}
-
-// Function to enable translation during active session with existing languages
-async function enableTranslationDuringSession() {
-  try {
-    if (!taskId) {
-      showPopup("No active transcription session");
-      return;
-    }
-    
-    // Get current translation pairs from STT settings
-    const translationPairs = Array.from(document.querySelectorAll('#translation-pairs .translation-pair')).map(pair => {
-      const source = pair.querySelector('.source-lang').value;
-      const targets = Array.from(pair.querySelectorAll('.target-languages input')).map(input => input.value);
-      return {
-        source,
-        target: targets
-      };
-    }).filter(pair => pair.source && pair.target.length > 0);
-    
-    if (translationPairs.length === 0) {
-      showPopup("No translation pairs configured. Please configure translation pairs in STT settings first.");
-      return;
-    }
-    
-    let updateMask = "translateConfig.enable,translateConfig.languages";
-    let body = {
-      translateConfig: {
-        enable: true,
-        languages: translationPairs
-      }
-    };
-    
-    // Only include languages if they are different from current ones
-    // For now, we'll just enable translation without languages to avoid the "same languages" error
-    // The languages will be set when the user actually speaks
-    
-    await updateTaskConfiguration(updateMask, body);
-    
-    // Update translation state
-    translationEnabled = true;
-    updateTranslationStatus();
-    
-    $("#enable-translation").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
-    $("#disable-translation").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
-    showPopup("Translation enabled");
-  } catch (error) {
-    console.error("Error enabling translation:", error);
-    showPopup("Failed to enable translation: " + error.message);
-  }
-}
-
-// Function to show translation configuration modal
-function showTranslationConfigModal() {
-  if (!taskId) {
-    showPopup("No active transcription session");
-    return;
-  }
-  
-  // Load current translation pairs from STT settings into the modal
-  loadSessionTranslationPairs();
-  document.getElementById('translationConfigModal').showModal();
-}
-
-// Function to load session translation pairs
-function loadSessionTranslationPairs() {
-  const container = document.getElementById('session-translation-pairs');
-  container.innerHTML = '';
-  
-  // Get current translation pairs from STT settings
-  const translationPairs = Array.from(document.querySelectorAll('#translation-pairs .translation-pair')).map(pair => {
-    const source = pair.querySelector('.source-lang').value;
-    const targets = Array.from(pair.querySelectorAll('.target-languages input')).map(input => input.value);
-    return { source, targets };
-  }).filter(pair => pair.source && pair.targets.length > 0);
-  
-  if (translationPairs.length === 0) {
-    // Add empty pair if none exist
-    addSessionTranslationPair();
-  } else {
-    // Add existing pairs
-    translationPairs.forEach(pair => {
-      addSessionTranslationPair(pair.source, pair.targets);
-    });
-  }
-}
-
-// Function to add session translation pair
-function addSessionTranslationPair(source = '', targets = ['']) {
-  const container = document.getElementById('session-translation-pairs');
-  const div = document.createElement('div');
-  div.className = 'translation-pair-modal border border-gray-700 p-4 rounded';
-  div.innerHTML = `
-    <div class="mb-4">
-      <div class="flex justify-between items-center mb-2">
-        <label class="block">Source Language</label>
-        <button onclick="this.closest('.translation-pair').remove();" class="text-red-500 text-sm">Remove Pair</button>
-      </div>
-      <input type="text" class="source-lang w-full bg-gray-800 rounded p-2" value="${source}" placeholder="e.g., en-US">
-    </div>
-    <div class="target-languages space-y-2">
-      <label class="block mb-2">Target Languages</label>
-      ${targets.map(target => `
-        <div class="flex gap-2">
-          <input type="text" class="flex-1 bg-gray-800 rounded p-2" value="${target}" placeholder="Target language">
-          <button onclick="this.parentElement.remove()" class="bg-red-600 px-3 rounded">-</button>
-        </div>
-      `).join('')}
-      <button onclick="addTargetLanguage(this)" class="bg-blue-600 px-3 py-2 rounded w-full">Add Target Language</button>
-    </div>
-  `;
-  container.appendChild(div);
-}
-
-// Function to update translation languages during active session
-async function updateTranslationLanguagesDuringSession() {
-  try {
-    if (!taskId) {
-      showPopup("No active transcription session");
-      return;
-    }
-    
-    // Get current translation pairs from the modal
-    const translationPairs = Array.from(document.querySelectorAll('#session-translation-pairs .translation-pair-modal')).map(pair => {
-      const source = pair.querySelector('.source-lang').value;
-      const targets = Array.from(pair.querySelectorAll('.target-languages input')).map(input => input.value);
-      return {
-        source,
-        target: targets
-      };
-    }).filter(pair => pair.source && pair.target.length > 0);
-    
-    if (translationPairs.length === 0) {
-      showPopup("No translation pairs configured. Please configure translation pairs first.");
-      return;
-    }
-    
-    // Consolidate translation pairs by source language to avoid duplicates
-    const consolidatedPairs = {};
-    translationPairs.forEach(pair => {
-      if (!consolidatedPairs[pair.source]) {
-        consolidatedPairs[pair.source] = [];
-      }
-      // Add all targets for this source, avoiding duplicates
-      pair.target.forEach(target => {
-        if (!consolidatedPairs[pair.source].includes(target)) {
-          consolidatedPairs[pair.source].push(target);
-        }
-      });
-    });
-    
-    // Convert back to array format
-    const finalPairs = Object.entries(consolidatedPairs).map(([source, targets]) => ({
-      source,
-      target: targets
-    }));
-    
-    // Always enable translation when updating languages (since we're configuring them)
-    const updateMask = "translateConfig.enable,translateConfig.languages";
-    const body = {
-      translateConfig: {
-        enable: true,
-        languages: finalPairs
-      }
-    };
-    
-    await updateTaskConfiguration(updateMask, body);
-    translationEnabled = true;
-    updateTranslationStatus();
-    
-    // Update the STT settings modal to reflect the new configuration
-    updateSTTSettingsFromSession();
-    
-    $("#enable-translation").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
-    $("#disable-translation").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
-    showPopup("Translation languages updated and enabled");
-    document.getElementById('translationConfigModal').close();
-  } catch (error) {
-    console.error("Error updating translation languages:", error);
-    showPopup("Failed to update translation languages: " + error.message);
-  }
-}
-
-// Function to update translation status display
-function updateTranslationStatus() {
-  const statusElement = document.getElementById('translation-status');
-  if (statusElement) {
-    if (translationEnabled) {
-      statusElement.textContent = 'Enabled';
-      statusElement.className = 'text-sm font-medium text-green-400';
-      $("#enable-translation").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
-      $("#disable-translation").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
-    } else {
-      statusElement.textContent = 'Disabled';
-      statusElement.className = 'text-sm font-medium text-gray-400';
-      $("#enable-translation").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
-      $("#disable-translation").prop('disabled', true).addClass('opacity-50 cursor-not-allowed');
-    }
-  }
-}
-
-// Function to update STT settings from session configuration
-function updateSTTSettingsFromSession() {
-  const sessionPairs = Array.from(document.querySelectorAll('#session-translation-pairs .translation-pair-modal')).map(pair => {
-    const source = pair.querySelector('.source-lang').value;
-    const targets = Array.from(pair.querySelectorAll('.target-languages input')).map(input => input.value);
-    return { source, targets };
-  }).filter(pair => pair.source && pair.targets.length > 0);
-  
-  // Consolidate pairs by source language to avoid duplicates
-  const consolidatedPairs = {};
-  sessionPairs.forEach(pair => {
-    if (!consolidatedPairs[pair.source]) {
-      consolidatedPairs[pair.source] = [];
-    }
-    // Add all targets for this source, avoiding duplicates
-    pair.targets.forEach(target => {
-      if (!consolidatedPairs[pair.source].includes(target)) {
-        consolidatedPairs[pair.source].push(target);
-      }
-    });
-  });
-  
-  // Update the STT settings modal
-  const container = document.getElementById('translation-pairs');
-  container.innerHTML = '';
-  
-  Object.entries(consolidatedPairs).forEach(([source, targets]) => {
-    const div = document.createElement('div');
-    div.className = 'translation-pair border border-gray-700 p-4 rounded';
-    div.innerHTML = `
-      <div class="mb-4">
-        <div class="flex justify-between items-center mb-2">
-          <label class="block">Source Language</label>
-          <button onclick="this.closest('.translation-pair').remove(); saveTranslationSettings();" class="text-red-500 text-sm">Remove Pair</button>
-        </div>
-        <input type="text" class="source-lang w-full bg-gray-800 rounded p-2" value="${source}">
-      </div>
-      <div class="target-languages space-y-2">
-        <label class="block mb-2">Target Languages</label>
-        ${targets.map(target => `
-          <div class="flex gap-2">
-            <input type="text" class="flex-1 bg-gray-800 rounded p-2" value="${target}">
-            <button onclick="this.parentElement.remove()" class="bg-red-600 px-3 rounded">-</button>
-          </div>
-        `).join('')}
-        <button onclick="addTargetLanguage(this)" class="bg-blue-600 px-3 py-2 rounded w-full">Add Target Language</button>
-      </div>
-    `;
-    container.appendChild(div);
-  });
-  
-  // Save the updated settings
-  saveTranslationSettings();
-}
-
-
-
-// Add functions to manage overlay visibility
-function showOverlay(uid) {
-  // Clear existing timeout if any
-  if (overlayTimeouts.has(uid)) {
-    clearTimeout(overlayTimeouts.get(uid));
-  }
-  
-  // Show overlay for either local or remote user
-  if (uid === options.uid) {
-    // Local user
-    $(`.video-container .transcription-overlay`).removeClass('hidden');
-  } else {
-    // Remote user
-    $(`#video-wrapper-${uid} .transcription-overlay`).removeClass('hidden');
-  }
-  
-  // Set new timeout to hide overlay
-  const timeout = setTimeout(() => hideOverlay(uid), OVERLAY_HIDE_DELAY);
-  overlayTimeouts.set(uid, timeout);
-}
-
-function hideOverlay(uid) {
-  if (uid === options.uid) {
-    // Local user
-    $(`.video-container .transcription-overlay`).addClass('hidden');
-  } else {
-    // Remote user
-    $(`#video-wrapper-${uid} .transcription-overlay`).addClass('hidden');
-  }
-  overlayTimeouts.delete(uid);
-}
-
-// Add version handling functions
-function handleVersionChange() {
-  sttVersion = $("#stt-version").val();
-  const maxLanguages = sttVersion === "7.x" ? 4 : 2;
-  
-  // Update max languages display
-  $("#max-speaking-languages").text(maxLanguages);
-  
-  // Get current values
-  const container = document.getElementById('speaking-languages');
-  const currentInputs = Array.from(container.querySelectorAll('input')).map(input => input.value);
-  const languages = currentInputs.slice(0, maxLanguages);
-  renderSpeakingLanguagesInputs(languages, maxLanguages);
-
-  // Update translation pairs container
-  const pairsContainer = document.getElementById('translation-pairs');
-  if (sttVersion === "7.x" && pairsContainer.children.length > 4) {
-    while (pairsContainer.children.length > 4) {
-      pairsContainer.lastChild.remove();
-    }
-  }
-
-  // Handle Sub Bot fields for 7.x
-  const subBotUidField = $("#puller-uid");
-  const subBotTokenField = $("#puller-token");
-  const subBotNote = $("#sub-bot-note");
-  const subBotTokenNote = $("#sub-bot-token-note");
-  
-  // COMMENTED OUT: Auto-sync behavior for 7.x
-  /*
-  if (sttVersion === "7.x") {
-    // For 7.x, sync sub bot fields with pub bot fields
-    const pubBotUid = $("#pusher-uid").val();
-    const pubBotToken = $("#pusher-token").val();
-    
-    subBotUidField.val(pubBotUid);
-    subBotTokenField.val(pubBotToken);
-    
-    subBotUidField.prop('disabled', true);
-    subBotTokenField.prop('disabled', true);
-    subBotNote.text("Auto-synced with Pub Bot UID");
-    subBotTokenNote.text("Auto-synced with Pub Bot Token");
-    subBotNote.show();
-    subBotTokenNote.show();
-  } else {
-    subBotUidField.prop('disabled', false);
-    subBotTokenField.prop('disabled', false);
-    subBotNote.hide();
-    subBotTokenNote.hide();
-  }
-  */
-  
-  // REVERTED: Both fields are always enabled and editable
-  subBotUidField.prop('disabled', false);
-  subBotTokenField.prop('disabled', false);
-  subBotNote.hide();
-  subBotTokenNote.hide();
-}
-
-function renderSpeakingLanguagesInputs(languages, maxLanguages) {
-  const container = document.getElementById('speaking-languages');
-  container.innerHTML = '';
-  languages.forEach(lang => {
-    const div = document.createElement('div');
-    div.className = 'flex gap-2';
-    div.innerHTML = `
-      <input type="text" class="flex-1 bg-gray-800 rounded p-2" value="${lang}">
-      <button onclick="this.parentElement.remove()" class="bg-red-600 px-3 rounded">-</button>
-    `;
-    container.appendChild(div);
-  });
-  // Add the + button row if not at max
-  if (languages.length < maxLanguages) {
-    const addDiv = document.createElement('div');
-    addDiv.className = 'flex gap-2';
-    addDiv.innerHTML = `
-      <button onclick="addLanguageInput('speaking-languages')" class="bg-blue-600 px-3 rounded w-full">+</button>
-    `;
-    container.appendChild(addDiv);
-  }
-}
-
-// Show inline alert in STT modal
-function showSTTModalAlert(message) {
-  const alertDiv = document.getElementById('stt-modal-alert');
-  alertDiv.textContent = message;
-  alertDiv.classList.remove('hidden');
-  // Scroll modal to top so alert is visible
-  const sttModal = document.getElementById('sttModal');
-  if (sttModal && typeof sttModal.scrollTo === 'function') {
-    sttModal.scrollTo({ top: 0, behavior: 'smooth' });
-  } else if (sttModal) {
-    sttModal.scrollTop = 0;
-  }
-  setTimeout(() => {
-    alertDiv.classList.add('hidden');
-  }, 3000);
-}
-
-// Function to build the start request body (same logic as startTranscription)
-function buildStartRequestBody() {
-  // Build request body based on version
-  const body = {
-    languages: Array.from(document.querySelectorAll('#speaking-languages input'))
-      .map(input => input.value)
-      .filter(value => value.trim() !== ''),
-    maxIdleTime: parseInt($("#max-idle-time").val()) || 60,
-    rtcConfig: {
-      channelName: options.channel,
-      pubBotUid: $("#pusher-uid").val()
-    }
-  };
-
-  // Include subBotUid and subBotToken
-  body.rtcConfig.subBotUid = $("#puller-uid").val();
-  const pullToken = $("#puller-token").val();
-  if (pullToken) body.rtcConfig.subBotToken = pullToken;
-
-  // Add name field for 7.x
-  if (sttVersion === "7.x") {
-    body.name = options.channel; // Using channel name as the agent name
-  }
-
-  // Add optional pub bot token
-  const pushToken = $("#pusher-token").val();
-  if (pushToken) body.rtcConfig.pubBotToken = pushToken;
-
-  // Add encryption if specified
-  const decryptionMode = $("#decryption-mode").val();
-  const secret = $("#encryption-secret").val();
-  const salt = $("#encryption-salt").val();
-  if (decryptionMode) body.rtcConfig.cryptionMode = parseInt(decryptionMode);
-  if (secret) body.rtcConfig.secret = secret;
-  if (salt) body.rtcConfig.salt = salt;
-
-  // Add translation config
-  const translationPairs = Array.from(document.querySelectorAll('.translation-pair')).map(pair => {
-    const source = pair.querySelector('.source-lang').value;
-    const targets = Array.from(pair.querySelectorAll('.target-languages input')).map(input => input.value);
-    return {
-      source,
-      target: targets
-    };
-  }).filter(pair => pair.source && pair.target.length > 0);
-
-  if (translationPairs.length > 0) {
-    body.translateConfig = {
-      enable: true,
-      forceTranslateInterval: 5,
-      languages: translationPairs
-    };
-  }
-
-  // Add optional storage config
-  const s3Bucket = $("#s3-bucket").val();
-  if (s3Bucket) {
-    body.captionConfig = {
-      sliceDuration: 60,
-      storage: {
-        bucket: s3Bucket
-      }
-    };
-
-    // Add optional storage credentials
-    const s3AccessKey = $("#s3-access-key").val();
-    const s3SecretKey = $("#s3-secret-key").val();
-    if (s3AccessKey && s3SecretKey) {
-      body.captionConfig.storage.accessKey = s3AccessKey;
-      body.captionConfig.storage.secretKey = s3SecretKey;
-    }
-
-    // Add optional storage configuration
-    const s3Vendor = $("#s3-vendor").val();
-    if (s3Vendor) {
-      body.captionConfig.storage.vendor = parseInt(s3Vendor);
-    }
-
-    const s3Region = $("#s3-region").val();
-    if (s3Region) {
-      body.captionConfig.storage.region = parseInt(s3Region);
-    }
-
-    const s3FileNamePrefix = $("#s3-fileNamePrefix").val();
-    if (s3FileNamePrefix) {
-      body.captionConfig.storage.fileNamePrefix = [s3FileNamePrefix];
-    }
-  }
-
-  return body;
-}
-
-// Function to preview the start request
-function previewStartRequest() {
-  try {
-    const body = buildStartRequestBody();
-    const requestBodyElement = document.getElementById('request-body');
-    const previewDiv = document.getElementById('request-preview');
-    
-    // Format the JSON with proper indentation
-    const formattedJson = JSON.stringify(body, null, 2);
-    requestBodyElement.textContent = formattedJson;
-    
-    // Show the preview
-    previewDiv.classList.remove('hidden');
-    
-    // Scroll to the preview section
-    const sttModal = document.getElementById('sttModal');
-    if (sttModal && typeof sttModal.scrollTo === 'function') {
-      sttModal.scrollTo({ top: sttModal.scrollHeight, behavior: 'smooth' });
-    }
-    
-  } catch (error) {
-    console.error('Error building request preview:', error);
-    showSTTModalAlert('Error building request preview: ' + error.message);
-  }
-}
-
-// Function to copy request to clipboard
-async function copyRequestToClipboard() {
-  try {
-    const requestBodyElement = document.getElementById('request-body');
-    const text = requestBodyElement.textContent;
-    
-    if (navigator.clipboard && window.isSecureContext) {
-      // Use the modern clipboard API
-      await navigator.clipboard.writeText(text);
-    } else {
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = text;
-      textArea.style.position = 'fixed';
-      textArea.style.left = '-999999px';
-      textArea.style.top = '-999999px';
-      document.body.appendChild(textArea);
-      textArea.focus();
-      textArea.select();
-      document.execCommand('copy');
-      textArea.remove();
-    }
-    
-    showPopup('Request body copied to clipboard!');
-  } catch (error) {
-    console.error('Error copying to clipboard:', error);
-    showPopup('Failed to copy to clipboard: ' + error.message);
-  }
-}
-</script>
+  <!-- JavaScript modules -->
+  <script src="js/config.js"></script>
+  <script src="js/agora-client.js"></script>
+  <script src="js/transcription.js"></script>
+  <script src="js/translation.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/settings.js"></script>
+  <script src="js/main.js"></script>
 
 </body>
 </html>
