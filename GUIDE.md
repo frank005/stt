@@ -19,33 +19,35 @@ By the end, you'll understand how Agora's Speech-to-Text API works, how to recei
 
 The application follows a modular structure with clear separation of concerns:
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                         Browser                              │
-│                                                              │
-│  ┌──────────────┐    ┌──────────────┐    ┌──────────────┐  │
-│  │   UI Layer   │───▶│  Agora RTC   │───▶│  STT Agent   │  │
-│  │  (index.html)│◀───│   Client     │◀───│  (Backend)   │  │
-│  └──────────────┘    └──────────────┘    └──────────────┘  │
-│         │                    │                    │          │
-│         ▼                    ▼                    ▼          │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │          JavaScript Modules                          │  │
-│  │  • config.js - Global state and initialization      │  │
-│  │  • main.js - Event handlers and flow control        │  │
-│  │  • agora-client.js - RTC event listeners            │  │
-│  │  • transcription.js - STT API integration           │  │
-│  │  • translation.js - Real-time translation control   │  │
-│  │  • ui.js - UI updates and interactions              │  │
-│  │  • settings.js - Configuration management           │  │
-│  └──────────────────────────────────────────────────────┘  │
-│         │                                                    │
-│         ▼                                                    │
-│  ┌──────────────────────────────────────────────────────┐  │
-│  │          Message Decoder                             │  │
-│  │  Decodes stream messages from STT agent             │  │
-│  └──────────────────────────────────────────────────────┘  │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+flowchart TB
+    subgraph Browser["Browser"]
+        UI["UI Layer<br/>(index.html)"]
+        RTC["Agora RTC<br/>Client"]
+        STT["STT Agent<br/>(Backend)"]
+        
+        UI <--> RTC
+        RTC <--> STT
+    end
+    
+    subgraph JS["JavaScript Modules"]
+        Config["config.js<br/>Global state and initialization"]
+        Main["main.js<br/>Event handlers and flow control"]
+        AgoraClient["agora-client.js<br/>RTC event listeners"]
+        Transcription["transcription.js<br/>STT API integration"]
+        Translation["translation.js<br/>Real-time translation control"]
+        UI_JS["ui.js<br/>UI updates and interactions"]
+        Settings["settings.js<br/>Configuration management"]
+    end
+    
+    subgraph Decoder["Message Decoder"]
+        Decode["Decodes stream messages<br/>from STT agent"]
+    end
+    
+    UI --> JS
+    RTC --> JS
+    STT --> Decoder
+    JS --> Decoder
 ```
 
 **Why this architecture?**
@@ -1801,7 +1803,7 @@ Now go build something amazing. And when you do, share it with the community. We
 - [Agora STT API Documentation](https://docs.agora.io/en/real-time-stt/overview/product-overview)
 - [Agora RTC SDK Reference](https://docs.agora.io/en/video-calling/reference/web-sdk)
 - [Supported Languages and Locales](https://docs.agora.io/en/real-time-stt/reference/supported-languages)
-- [GitHub Repository](https://github.com/AgoraIO-Community/stt)
+- [GitHub Repository](https://github.com/AgoraIO-Community/agora-stt)
 
 ---
 
