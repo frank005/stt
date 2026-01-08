@@ -20,32 +20,34 @@ By the end, you'll understand how Agora's Speech-to-Text API works, how to recei
 The application follows a modular structure with clear separation of concerns:
 
 ```mermaid
-flowchart LR
+flowchart TB
     subgraph Browser["Browser"]
-        UI["UI Layer<br/>index.html"]
-        JS["JS Modules<br/>main.js, transcription.js<br/>agora-client.js, etc."]
+        direction LR
+        UI["UI Layer"]
+        JS["JS Modules"]
         RTC["Agora RTC SDK"]
-        Proto["Protobuf Decoder<br/>proto/index.js"]
+        Proto["Protobuf Decoder"]
         
         UI <--> JS
         JS <--> RTC
-        RTC -->|stream-message| Proto
+        RTC -->|protobuf| Proto
         Proto -->|decoded| JS
     end
     
     subgraph Channel["Agora RTC Channel"]
+        direction LR
         Audio["Audio Stream"]
-        Stream["Protobuf Messages"]
+        Stream["Data Stream"]
     end
     
     subgraph Backend["Agora Backend"]
-        STT["STT Agent<br/>Listens to audio<br/>Transcribes & sends protobuf"]
+        STT["STT Agent"]
     end
     
     RTC -->|Publish| Audio
     Audio -->|Subscribe| STT
-    STT -->|Send| Stream
-    Stream -->|Receive| RTC
+    STT -->|Send protobuf| Stream
+    Stream -->|stream-message| RTC
 ```
 
 **Why this architecture?**
