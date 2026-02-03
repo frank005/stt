@@ -32,6 +32,7 @@ async function startTranscription() {
 
   // Build the complete configuration for the STT agent
   const body = buildStartRequestBody();
+  currentSpeakingLanguages = body.languages || [];
 
   console.log("Starting transcription with body:", body);
 
@@ -97,8 +98,8 @@ async function startTranscription() {
 
   // Update UI to reflect transcription is active
   updateButtonStates('transcribing');
-  
-  // Track whether translation was enabled in the initial request
+  clearTranscriptHistory();
+
   if (body.translateConfig && body.translateConfig.enable) {
     translationEnabled = true;
   } else {

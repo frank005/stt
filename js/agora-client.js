@@ -59,23 +59,38 @@ async function subscribe(user, mediaType) {
   }
 }
 
-/**
- * Handle stream messages from the STT agent
- * 
- * The STT agent publishes transcription and translation results as binary
- * protobuf messages via Agora's Data Stream feature. This handler:
- * 1. Decodes the binary message using protobuf schema
- * 2. Extracts transcription or translation data
- * 3. Updates the appropriate UI overlay
- * 4. Manages overlay visibility (auto-hide after 5 seconds)
- * 
- * Message types:
- * - "transcribe": Contains original transcribed words
- * - "translate": Contains translations in multiple target languages
- */
+// Host automatically sends transcription + translation languages; joiners receive and update transcript UI only
+var STT_LANGUAGES_MSG_TYPE = "stt-languages";
+
+function sendSttLanguagesToChannel() {
+  if (!taskId || !client) return;
+  try {
+    var speaking = getSpeakingLanguagesConfig();
+    var pairs = (translationSettings.pairs || []).map(function (p) {
+      return { source: p.source, targets: p.targets || [] };
+    });
+    var payload = { type: STT_LANGUAGES_MSG_TYPE, speaking: speaking, translationPairs: pairs };
+    client.sendStreamMessage(stringToUint8Array(JSON.stringify(payload)));
+  } catch (e) {
+    console.error("Failed to send STT languages to channel:", e);
+  }
+}
+
+// Update stream message handler
 client.on("stream-message", function(uid, data) {
   try {
-    // Decode the protobuf message using our schema definition
+    if (data && (data instanceof Uint8Array ? data[0] === 0x7B : (data.byteLength && new Uint8Array(data)[0] === 0x7B))) {
+      try {
+        var str = utf8ArrayToString(data);
+        var parsed = JSON.parse(str);
+        if (parsed && parsed.type === STT_LANGUAGES_MSG_TYPE && !taskId) {
+          setBroadcastedSupportedLanguages({ speaking: parsed.speaking || [], translationPairs: parsed.translationPairs || [] });
+          if (typeof renderTranscriptsModalContent === "function") renderTranscriptsModalContent();
+          return;
+        }
+      } catch (e) {}
+    }
+
     const Text = $protobufRoot.lookup("agora.audio2text.Text");
     const msg = Text.decode(data);
     
@@ -97,8 +112,21 @@ client.on("stream-message", function(uid, data) {
       
       // Optional: Add to history log
       addTranscribeItem(msg.uid, text);
-    } 
-    // Handle translation messages
+      const hasFinal = msg.words.some(w => w.isFinal === true);
+      if (hasFinal && text.trim()) {
+        var speakingLangs = getSpeakingLanguagesConfig();
+        var idx = typeof msg.lang === 'number' ? msg.lang : (msg.lang != null ? parseInt(msg.lang, 10) : NaN);
+        var sourceLang = (!isNaN(idx) && speakingLangs[idx] != null) ? speakingLangs[idx] : undefined;
+        if (!sourceLang && speakingLangs.length === 1) sourceLang = speakingLangs[0];
+        transcriptHistory.push({
+          uid: msg.uid,
+          time: timestamp,
+          transcriptText: text.trim(),
+          sourceLang: sourceLang,
+          translations: {}
+        });
+      }
+    }
     else if (msg.data_type === "translate" && msg.trans && msg.trans.length) {
       // Get the user's currently selected translation language
       const selectedLang = $(`#translation-lang-${msg.uid}`).val();
@@ -118,6 +146,27 @@ client.on("stream-message", function(uid, data) {
         // Optional: Add to history log
         addTranslateItem(msg.uid, text);
       }
+      // Add final translations to the last transcript segment for this uid
+      let segmentToUpdate = transcriptHistory.filter(s => s.uid === msg.uid).pop();
+      msg.trans.forEach(t => {
+        if (t.isFinal === true && t.texts && t.texts.length) {
+          const transText = t.texts.join("").trim();
+          if (transText) {
+            if (segmentToUpdate) {
+              segmentToUpdate.translations[t.lang] = transText;
+            } else {
+              const newSeg = {
+                uid: msg.uid,
+                time: timestamp,
+                transcriptText: "",
+                translations: { [t.lang]: transText }
+              };
+              transcriptHistory.push(newSeg);
+              segmentToUpdate = newSeg;
+            }
+          }
+        }
+      });
     }
   } catch (error) {
     console.error("Error handling stream message:", error);
@@ -191,6 +240,7 @@ client.on("user-published", async function(user, mediaType) {
     // Play audio through system speakers
     user.audioTrack.play();
   }
+  if (taskId) sendSttLanguagesToChannel();
 });
 
 /**

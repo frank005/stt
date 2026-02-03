@@ -380,6 +380,7 @@ async function updateTranslationLanguagesDuringSession() {
     $("#disable-translation").prop('disabled', false).removeClass('opacity-50 cursor-not-allowed');
     showPopup("Translation languages updated and enabled");
     document.getElementById('translationConfigModal').close();
+    if (typeof sendSttLanguagesToChannel === "function") sendSttLanguagesToChannel();
   } catch (error) {
     console.error("Error updating translation languages:", error);
     showPopup("Failed to update translation languages: " + error.message);
