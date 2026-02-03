@@ -28,10 +28,81 @@ const userLanguages = new Map(); // uid -> { speaking: string, translations: Set
 const overlayTimeouts = new Map(); // uid -> timeout
 const OVERLAY_HIDE_DELAY = 5000; // 5 seconds
 
+// Transcript history (final segments only) for the transcripts modal
+let transcriptHistory = [];
+
+// Speaking (transcription) language codes sent in start request; used to map msg.lang (int32) to code per segment
+let currentSpeakingLanguages = [];
+
+function clearTranscriptHistory() {
+  transcriptHistory = [];
+}
+
+// Speaking languages from DOM or saved settings; works on any tab (even if it did not start RTT)
+function getSpeakingLanguagesConfig() {
+  if (currentSpeakingLanguages && currentSpeakingLanguages.length > 0) return currentSpeakingLanguages;
+  try {
+    var inputs = document.querySelectorAll('#speaking-languages input');
+    var list = [];
+    if (inputs && inputs.length) {
+      inputs.forEach(function (input) {
+        var v = (input.value || '').trim();
+        if (v) list.push(v);
+      });
+    }
+    if (list.length > 0) return list;
+    var saved = JSON.parse(localStorage.getItem('sttSettings') || '{}');
+    return (saved.speakingLanguages || []).filter(Boolean);
+  } catch (e) {
+    return [];
+  }
+}
+
 // Store translation settings
 let translationSettings = {
   pairs: []
 };
+
+// Host broadcasts transcription + translation languages over data stream so joiners can build transcript UI
+let broadcastedSupportedLanguages = { speaking: [], translationPairs: [] };
+
+function setBroadcastedSupportedLanguages(data) {
+  if (data && typeof data === 'object') {
+    broadcastedSupportedLanguages = {
+      speaking: Array.isArray(data.speaking) ? data.speaking : [],
+      translationPairs: Array.isArray(data.translationPairs) ? data.translationPairs : []
+    };
+  }
+}
+
+function stringToUint8Array(str) {
+  var result = new Uint8Array(new ArrayBuffer(str.length));
+  for (var i = 0; i < str.length; i += 1) result[i] = str.charCodeAt(i);
+  return result;
+}
+
+function utf8ArrayToString(array) {
+  var out = "", i = 0, len = array.length, c, char2, char3;
+  if (!(array instanceof Uint8Array)) array = new Uint8Array(array);
+  while (i < len) {
+    c = array[i++];
+    switch (c >> 4) {
+      case 0: case 1: case 2: case 3: case 4: case 5: case 6: case 7:
+        out += String.fromCharCode(c);
+        break;
+      case 12: case 13:
+        char2 = array[i++];
+        out += String.fromCharCode(((c & 0x1F) << 6) | (char2 & 0x3F));
+        break;
+      case 14:
+        char2 = array[i++];
+        char3 = array[i++];
+        out += String.fromCharCode(((c & 0x0F) << 12) | ((char2 & 0x3F) << 6) | (char3 & 0x3F));
+        break;
+    }
+  }
+  return out;
+}
 
 // Initialize AgoraRTC client
 if (!client) {

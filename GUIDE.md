@@ -1,6 +1,6 @@
 # Building Real-Time Speech-to-Text with Translation Using Agora
 
-Picture this: You're in a video call with colleagues from three different countries. Someone speaks in Spanish, another in Mandarin, and you need to understand everything in real-time. Instead of waiting for someone to translate or missing critical information, you see transcriptions and translations appear instantly on screen as people speak.
+Picture this: You're in a video call with colleagues from three different countries. Someone speaks in Spanish, another in Mandarin, , another in Finnish,and you need to understand everything in real-time. Instead of waiting for someone to translate or missing critical information, you see transcriptions and translations appear instantly on screen as people speak.
 
 This guide shows you how to build exactly that—a web application that combines Agora's Real-Time Communication (RTC) platform with Speech-to-Text (STT) to create live transcriptions and translations that appear as transparent overlays on video streams.
 
@@ -176,13 +176,9 @@ function GetAuthorization() {
 **Where do you get these credentials?**
 
 1. Log in to [Agora Console](https://console.agora.io)
-2. Select your project (or create one if you haven't)
-3. Navigate to **Extensions** → **Speech-to-Text**
-4. Copy your **Customer Key** and **Customer Secret**
-
-**Critical security warning**: 
-
-I'm showing credentials in client-side code because this is a demo. **Never do this in production.** 
+2. Click on your name in the top right corner
+3. Navigate to RESTful Credentials
+4. Download your **Customer Key** and **Customer Secret**
 
 Here's what happens if you expose credentials: Anyone can open your website's JavaScript, copy your key and secret, and use your Agora account to transcribe their own channels—on your dime. Your bill could skyrocket overnight.
 
@@ -213,7 +209,7 @@ const client = AgoraRTC.createClient({
 
 - **mode: "live"**: This optimizes for broadcast scenarios—a few speakers, many viewers. The network stack prioritizes reliability over low latency. If you're building a peer-to-peer video call where everyone talks equally, use `"rtc"` mode instead. For this demo, `"live"` works because we're demonstrating transcription, not building a full communication app.
 
-- **codec: "vp8"**: VP8 has universal browser support. H.264 requires hardware acceleration on some devices and can fail on older browsers. I've seen H.264 fail silently on Safari—VP8 just works everywhere. If you're building a mobile app, H.264 might be better (better battery life), but for web, VP8 is the safe choice.
+- **codec: "vp8"**: VP8 has universal browser support.
 
 - **role: "host"**: This is a safety mechanism. Only hosts can publish media. If someone joins as an audience member, they can't accidentally start broadcasting audio/video. In a real app, you'd control this dynamically—promote users to host when they want to speak, demote them when they're done.
 
@@ -498,7 +494,7 @@ async function startTranscription() {
 
 ### Understanding Stream Messages
 
-Agora STT sends transcription results as stream messages via the Data Stream. The messages are in protobuf format (Agora's standard), which the protobuf.js library decodes automatically.
+Agora STT sends transcription results as stream messages via the Data Stream. The messages are in protobuf format, which the protobuf.js library decodes automatically.
 
 **What you need to know:**
 
@@ -659,7 +655,7 @@ Early versions of this demo kept overlays visible forever. User feedback was cle
 
 The 5-second auto-hide strikes a balance: long enough to read the transcription, short enough to not be distracting. Each new message resets the timer, so active conversations keep the overlay visible, while silence clears the screen.
 
-The implementation uses a `Map` to track timeouts per user. When a new message arrives, we clear the old timeout and start a new one. This prevents memory leaks and ensures each user's overlay is managed independently.
+The implementation uses a `Map` to track timeouts per user. When a new message arrives, we clear the old timeout and start a new one. This prevents memory leaks and ensures each user's overlay is managed independently. This part is 100% up to you and what your app and users need, for this demo, this worked perfectly for us.
 
 ## Part 6: Dynamic Translation Control
 
@@ -986,7 +982,7 @@ I tried just showing the target language ("es-ES") in the dropdown. Users were c
 
 The "en-US → es-ES" format makes it immediately clear: "This option shows Spanish translations of English speech." In a multi-language channel where different users speak different languages, this context is essential.
 
-The format also helps when you have multiple source languages. If you configure `en-US → es-ES` and `zh-CN → es-ES`, the dropdown shows both, and users can choose which source language they want to see translated to Spanish.
+The format also helps when you have multiple source languages. If you configure `en-US → es-ES` and `zh-CN → es-ES`, the dropdown shows both, and users can choose which source language they want to see translated to Spanish. Again, this is another option that is completely up to your app and user needs. For other demo apps that we have built for other needs, we display it differently so there is a way forward for everyone based on what your needs to be shown.
 
 ### Persisting User Preferences
 
@@ -1202,7 +1198,7 @@ The custom popup system solves three problems:
 
 - **Branded**: The popups use the same gradient styling as the rest of the app. They feel integrated, not like browser errors.
 
-The implementation tracks popup count and offsets each new popup slightly to the right, so multiple popups don't overlap. After 3 seconds, they auto-dismiss.
+The implementation tracks popup count and offsets each new popup slightly to the right, so multiple popups don't overlap. After 3 seconds, they auto-dismiss. Another UI option that we went with but this may not matter in your use case, choose the way you need, not the way we did it in our demo.
 
 ### Modal Dialogs
 
@@ -1243,7 +1239,7 @@ I used to build modals with `<div>` elements and custom JavaScript. Then I disco
 
 - **Accessibility**: Screen readers announce dialogs properly. The `role="dialog"` and `aria-modal` attributes are handled automatically.
 
-The only gotcha: Some older browsers don't support `<dialog>`. For this demo, that's fine—modern browsers all support it. For production, you might need a polyfill.
+The only gotcha: Some older browsers don't support `<dialog>`. For this demo, that's fine—modern browsers all support it. For production, you might need a polyfill. Do what you need!!
 
 ## Part 10: Advanced Features
 
@@ -1326,7 +1322,7 @@ The files are saved with a naming pattern: `{fileNamePrefix}_{channelName}_{uid}
 
 ### Encryption Support
 
-If your Agora channel uses encryption:
+If you don't use encryption at all, then skip this part. If your Agora channel uses encryption:
 
 ```javascript
 const decryptionMode = $("#decryption-mode").val();
@@ -1774,18 +1770,12 @@ You've built something impressive: a real-time transcription and translation sys
 ### What's Next?
 
 **Extend the application:**
-- **Speaker identification (diarization)**: Know who said what, not just what was said
-- **Transcript history**: Save and search past conversations
-- **Multiple channels**: Support users in multiple rooms simultaneously
-- **Custom vocabulary**: Add domain-specific terms (medical, legal, technical)
 - **Mobile apps**: Port this to React Native or Flutter
 - **LLM integration**: Real-time summarization, sentiment analysis, action items
 
 **Optimize for production:**
 - **Backend proxy**: Move STT API calls to your server (security and control)
-- **Connection pooling**: Reuse connections for better performance
-- **Caching**: Cache language configurations to reduce API calls
-- **Load balancing**: Distribute transcription load across multiple agents
+- **Load balancing**: Distribute transcription load across multiple agents, do this for each individual host
 - **Monitoring**: Track latency, error rates, and usage metrics
 
 The code in this repository works for small to medium deployments. For enterprise scale, you'll need additional infrastructure: load balancers, monitoring systems, and proper backend architecture. But the core concepts you've learned here apply at any scale.
@@ -1802,7 +1792,7 @@ Now go build something amazing. And when you do, share it with the community. We
 
 - [Agora STT API Documentation](https://docs.agora.io/en/real-time-stt/overview/product-overview)
 - [Agora RTC SDK Reference](https://docs.agora.io/en/video-calling/reference/web-sdk)
-- [Supported Languages and Locales](https://docs.agora.io/en/real-time-stt/reference/supported-languages)
+- [Supported Languages and Locales](https://docs.agora.io/en/real-time-stt/develop/supported-languages)
 - [GitHub Repository](https://github.com/AgoraIO-Community/agora-stt)
 
 ---

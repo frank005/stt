@@ -12,6 +12,7 @@ async function startTranscription() {
 
   // Build request body using the shared function
   const body = buildStartRequestBody();
+  currentSpeakingLanguages = body.languages || [];
 
   console.log("Starting transcription with body:", body);
 
@@ -67,7 +68,8 @@ async function startTranscription() {
   }
 
   updateButtonStates('transcribing');
-  
+  clearTranscriptHistory();
+
   // Check if translation was enabled in the initial request
   if (body.translateConfig && body.translateConfig.enable) {
     translationEnabled = true;

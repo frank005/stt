@@ -36,9 +36,38 @@ async function subscribe(user, mediaType) {
   }
 }
 
+// Host automatically sends transcription + translation languages; joiners receive and update transcript UI only
+var STT_LANGUAGES_MSG_TYPE = "stt-languages";
+
+function sendSttLanguagesToChannel() {
+  if (!taskId || !client) return;
+  try {
+    var speaking = getSpeakingLanguagesConfig();
+    var pairs = (translationSettings.pairs || []).map(function (p) {
+      return { source: p.source, targets: p.targets || [] };
+    });
+    var payload = { type: STT_LANGUAGES_MSG_TYPE, speaking: speaking, translationPairs: pairs };
+    client.sendStreamMessage(stringToUint8Array(JSON.stringify(payload)));
+  } catch (e) {
+    console.error("Failed to send STT languages to channel:", e);
+  }
+}
+
 // Update stream message handler
 client.on("stream-message", function(uid, data) {
   try {
+    if (data && (data instanceof Uint8Array ? data[0] === 0x7B : (data.byteLength && new Uint8Array(data)[0] === 0x7B))) {
+      try {
+        var str = utf8ArrayToString(data);
+        var parsed = JSON.parse(str);
+        if (parsed && parsed.type === STT_LANGUAGES_MSG_TYPE && !taskId) {
+          setBroadcastedSupportedLanguages({ speaking: parsed.speaking || [], translationPairs: parsed.translationPairs || [] });
+          if (typeof renderTranscriptsModalContent === "function") renderTranscriptsModalContent();
+          return;
+        }
+      } catch (e) {}
+    }
+
     const Text = $protobufRoot.lookup("agora.audio2text.Text");
     const msg = Text.decode(data);
     
@@ -53,7 +82,22 @@ client.on("stream-message", function(uid, data) {
       $(`#video-wrapper-${msg.uid} #transcriptioncaps-${msg.uid}`).text(text);
       console.log(`[${timestamp}] Transcription from ${msg.uid}: ${text}`);
       addTranscribeItem(msg.uid, text);
-    } 
+      // Only add to history when we have a final segment
+      const hasFinal = msg.words.some(w => w.isFinal === true);
+      if (hasFinal && text.trim()) {
+        var speakingLangs = getSpeakingLanguagesConfig();
+        var idx = typeof msg.lang === 'number' ? msg.lang : (msg.lang != null ? parseInt(msg.lang, 10) : NaN);
+        var sourceLang = (!isNaN(idx) && speakingLangs[idx] != null) ? speakingLangs[idx] : undefined;
+        if (!sourceLang && speakingLangs.length === 1) sourceLang = speakingLangs[0];
+        transcriptHistory.push({
+          uid: msg.uid,
+          time: timestamp,
+          transcriptText: text.trim(),
+          sourceLang: sourceLang,
+          translations: {}
+        });
+      }
+    }
     else if (msg.data_type === "translate" && msg.trans && msg.trans.length) {
       const selectedLang = $(`#translation-lang-${msg.uid}`).val();
       const translation = msg.trans.find(t => t.lang === selectedLang);
@@ -63,6 +107,27 @@ client.on("stream-message", function(uid, data) {
         console.log(`[${timestamp}] Translation (${selectedLang}) from ${msg.uid}: ${text}`);
         addTranslateItem(msg.uid, text);
       }
+      // Add final translations to the last transcript segment for this uid
+      let segmentToUpdate = transcriptHistory.filter(s => s.uid === msg.uid).pop();
+      msg.trans.forEach(t => {
+        if (t.isFinal === true && t.texts && t.texts.length) {
+          const transText = t.texts.join("").trim();
+          if (transText) {
+            if (segmentToUpdate) {
+              segmentToUpdate.translations[t.lang] = transText;
+            } else {
+              const newSeg = {
+                uid: msg.uid,
+                time: timestamp,
+                transcriptText: "",
+                translations: { [t.lang]: transText }
+              };
+              transcriptHistory.push(newSeg);
+              segmentToUpdate = newSeg;
+            }
+          }
+        }
+      });
     }
   } catch (error) {
     console.error("Error handling stream message:", error);
@@ -118,6 +183,7 @@ client.on("user-published", async function(user, mediaType) {
   if (mediaType === "audio") {
     user.audioTrack.play();
   }
+  if (taskId) sendSttLanguagesToChannel();
 });
 
 // Update user-unpublished handler to be more thorough
