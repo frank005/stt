@@ -156,6 +156,7 @@ function loadSavedSettings() {
   } else {
     $("#uid-string").prop('checked', false);
   }
+  if (savedSTT.joinToken !== undefined) $("#join-token").val(savedSTT.joinToken);
   if (savedSTT.uid !== undefined && savedSTT.uid !== '') {
     const uidString = !!savedSTT.uidString;
     options.uid = uidString ? savedSTT.uid : parseInt(savedSTT.uid, 10);
@@ -192,6 +193,7 @@ function loadSTTFormFromStorage() {
   if (saved.channel !== undefined) $("#channel").val(saved.channel);
   if (saved.uid !== undefined) $("#uid").val(saved.uid);
   $("#uid-string").prop('checked', !!saved.uidString);
+  if (saved.joinToken !== undefined) $("#join-token").val(saved.joinToken);
   if (saved.version) $("#stt-version").val(saved.version);
   if (saved.maxIdleTime) $("#max-idle-time").val(saved.maxIdleTime);
   if (saved.sliceDuration) $("#slice-duration").val(saved.sliceDuration);
@@ -259,10 +261,12 @@ function saveSTTSettings() {
   options.channel = channel || null;
   options.uid = uidVal !== '' ? (uidString ? uidVal : parseInt(uidVal, 10)) : null;
 
+  var joinToken = $("#join-token").val();
   localStorage.setItem('sttSettings', JSON.stringify({
     channel: channel,
     uid: uidVal,
     uidString: uidString,
+    joinToken: joinToken,
     speakingLanguages: speakingLanguages,
     version: $("#stt-version").val(),
     maxIdleTime: $("#max-idle-time").val(),
