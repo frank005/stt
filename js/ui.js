@@ -176,7 +176,7 @@ function getTranscriptTabLanguages() {
   return Object.keys(allLangs).sort();
 }
 
-// Tab options: By segment, Transcript (all original speech), then one tab per language (from data + host-broadcast)
+// Tab options: By segment, Transcript (all original speech), then one tab per language, then Word cloud
 function getTranscriptTabOptions() {
   var list = [{ value: 'segment', label: 'By segment' }];
   var hasAnyTranscript = transcriptHistory.some(function (seg) { return seg.transcriptText; });
@@ -184,7 +184,61 @@ function getTranscriptTabOptions() {
   getTranscriptTabLanguages().forEach(function (lang) {
     list.push({ value: lang, label: lang });
   });
+  list.push({ value: 'wordcloud', label: 'Word cloud' });
   return list;
+}
+
+// Stop words to exclude from word cloud (common articles, pronouns, prepositions, etc.)
+var wordCloudStopWords = {
+  a: true, an: true, the: true, and: true, or: true, but: true, if: true, of: true, in: true, on: true, at: true, to: true, for: true, with: true, by: true, from: true, as: true, is: true, are: true, was: true, were: true, be: true, been: true, being: true, have: true, has: true, had: true, do: true, does: true, did: true, will: true, would: true, could: true, should: true, may: true, might: true, must: true, shall: true, can: true, this: true, that: true, these: true, those: true, it: true, its: true, i: true, you: true, he: true, she: true, we: true, they: true, me: true, him: true, her: true, us: true, them: true, my: true, your: true, his: true, our: true, their: true,
+  el: true, la: true, los: true, las: true, un: true, una: true, unos: true, unas: true, y: true, o: true, pero: true, si: true, de: true, del: true, en: true, al: true, a: true, por: true, para: true, con: true, sin: true, sobre: true, entre: true, hasta: true, desde: true, que: true, es: true, son: true, era: true, fueron: true, ser: true, estar: true, tiene: true, tener: true, hay: true, este: true, esta: true, estos: true, estas: true, ese: true, esa: true, eso: true, aquel: true, aquella: true, lo: true, le: true, se: true, te: true, nos: true, les: true, mi: true, tu: true, su: true, mis: true, tus: true, sus: true,
+  le: true, les: true, du: true, des: true, une: true, et: true, ou: true, mais: true, si: true, dans: true, sur: true, pour: true, avec: true, ce: true, cet: true, cette: true, ces: true, il: true, elle: true, on: true, nous: true, vous: true, ils: true, elles: true, der: true, die: true, das: true, und: true, oder: true, aber: true, in: true, von: true, zu: true, bei: true, mit: true
+};
+
+// All words from transcript + all translations, lowercased, with counts (for word cloud); stop words excluded
+function getWordCloudData() {
+  var count = {};
+  function addText(text) {
+    if (!text || typeof text !== 'string') return;
+    var words = text.toLowerCase().split(/\s+/).map(function (w) { return w.replace(/[^a-z0-9\u00C0-\u024F\u0400-\u04FF'-]/gi, ''); }).filter(function (w) { return w.length > 0; });
+    words.forEach(function (w) {
+      if (!wordCloudStopWords[w]) count[w] = (count[w] || 0) + 1;
+    });
+  }
+  transcriptHistory.forEach(function (seg) {
+    addText(seg.transcriptText);
+    var t = seg.translations || {};
+    Object.keys(t).forEach(function (lang) { addText(t[lang]); });
+  });
+  var arr = Object.keys(count).map(function (word) { return { word: word, count: count[word] }; });
+  arr.sort(function (a, b) { return b.count - a.count; });
+  return arr;
+}
+
+// Word cloud data with language: one row per (word, language), for CSV export
+function getWordCloudDataByLanguage() {
+  var count = {};
+  function addText(text, lang) {
+    if (!text || typeof text !== 'string' || !lang) return;
+    var words = text.toLowerCase().split(/\s+/).map(function (w) { return w.replace(/[^a-z0-9\u00C0-\u024F\u0400-\u04FF'-]/gi, ''); }).filter(function (w) { return w.length > 0; });
+    words.forEach(function (w) {
+      if (!wordCloudStopWords[w]) {
+        var key = w + '\0' + lang;
+        count[key] = (count[key] || 0) + 1;
+      }
+    });
+  }
+  transcriptHistory.forEach(function (seg) {
+    if (seg.sourceLang && seg.transcriptText) addText(seg.transcriptText, seg.sourceLang);
+    var t = seg.translations || {};
+    Object.keys(t).forEach(function (lang) { addText(t[lang], lang); });
+  });
+  var arr = Object.keys(count).map(function (key) {
+    var i = key.indexOf('\0');
+    return { word: key.slice(0, i), language: key.slice(i + 1), count: count[key] };
+  });
+  arr.sort(function (a, b) { return b.count - a.count || a.word.localeCompare(b.word) || a.language.localeCompare(b.language); });
+  return arr;
 }
 
 function getTranscriptSelectedLang() {
@@ -215,6 +269,7 @@ function getTranscriptsAsText(selectedLang) {
     });
     return out.length ? out.join('\n') : 'No final transcripts yet.';
   }
+  if (selectedLang === 'wordcloud') return 'Word cloud – click a word to copy it.';
   var langLines = [];
   transcriptHistory.forEach(function (seg) {
     var text = (seg.sourceLang === selectedLang && seg.transcriptText) ? seg.transcriptText : (seg.translations || {})[selectedLang];
@@ -232,6 +287,7 @@ function renderTranscriptsModalContent() {
 
   container.querySelectorAll('.transcript-segment').forEach(function (el) { el.remove(); });
   container.querySelectorAll('.transcript-script-section').forEach(function (el) { el.remove(); });
+  container.querySelectorAll('.transcript-wordcloud').forEach(function (el) { el.remove(); });
 
   if (!transcriptHistory.length) {
     emptyEl.classList.remove('hidden');
@@ -288,7 +344,7 @@ function renderTranscriptsModalContent() {
       segEl.innerHTML = html;
       container.appendChild(segEl);
     });
-  } else if (selectedBeforeRebuild === 'transcript') {
+  } else   if (selectedBeforeRebuild === 'transcript') {
     var sectionEl = document.createElement('div');
     sectionEl.className = 'transcript-script-section';
     var html = '<div class="space-y-1">';
@@ -298,6 +354,89 @@ function renderTranscriptsModalContent() {
     html += '</div>';
     sectionEl.innerHTML = html;
     container.appendChild(sectionEl);
+  } else if (selectedBeforeRebuild === 'wordcloud') {
+    var cloudData = getWordCloudData();
+    var cloudEl = document.createElement('div');
+    cloudEl.className = 'transcript-wordcloud';
+    if (cloudData.length === 0) {
+      cloudEl.innerHTML = '<p class="text-slate-500 text-sm">No words yet. Transcripts appear here after segments are finalized.</p>';
+    } else {
+      var hintRow = document.createElement('div');
+      hintRow.className = 'flex items-center justify-between gap-2 mb-3 flex-wrap';
+      var hint = document.createElement('p');
+      hint.className = 'text-slate-400 text-xs';
+      hint.textContent = 'Hover to see how many times a word appears; click to copy it.';
+      hintRow.appendChild(hint);
+      var exportCsvBtn = document.createElement('button');
+      exportCsvBtn.type = 'button';
+      exportCsvBtn.className = 'modern-btn modern-btn-secondary text-xs py-1.5 px-2';
+      exportCsvBtn.textContent = 'Export CSV';
+      exportCsvBtn.onclick = exportWordCloudAsCsv;
+      hintRow.appendChild(exportCsvBtn);
+      cloudEl.appendChild(hintRow);
+      var cloudShape = document.createElement('div');
+      cloudShape.className = 'word-cloud-shape';
+      var minCount = cloudData[cloudData.length - 1].count;
+      var maxCount = cloudData[0].count;
+      var range = Math.max(maxCount - minCount, 1);
+      var n = cloudData.length;
+      var positions = [];
+      var step = Math.max(5, Math.min(12, Math.floor(90 / Math.sqrt(n))));
+      for (var gx = 6; gx <= 94; gx += step) {
+        for (var gy = 10; gy <= 90; gy += step) {
+          var dx = (gx - 50) / 42;
+          var dy = (gy - 50) / 38;
+          if (dx * dx + dy * dy <= 1) positions.push({ left: gx + (Math.random() - 0.5) * (step * 0.4), top: gy + (Math.random() - 0.5) * (step * 0.4) });
+        }
+      }
+      while (positions.length < n) {
+        var t = Math.random() * Math.PI * 2;
+        var r = 0.2 + 0.75 * Math.random();
+        positions.push({ left: 50 + 40 * r * Math.cos(t) + (Math.random() - 0.5) * 3, top: 50 + 36 * r * Math.sin(t) + (Math.random() - 0.5) * 3 });
+      }
+      for (var pi = positions.length - 1; pi > 0; pi--) {
+        var pj = Math.floor(Math.random() * (pi + 1));
+        var tmp = positions[pi];
+        positions[pi] = positions[pj];
+        positions[pj] = tmp;
+      }
+      var shuffled = cloudData.slice();
+      for (var i = shuffled.length - 1; i > 0; i--) {
+        var j = Math.floor(Math.random() * (i + 1));
+        var tmp = shuffled[i];
+        shuffled[i] = shuffled[j];
+        shuffled[j] = tmp;
+      }
+      shuffled.forEach(function (item, idx) {
+        var pos = positions[idx] || { left: 50, top: 50 };
+        var size = 12 + Math.round(((item.count - minCount) / range) * 18);
+        var span = document.createElement('span');
+        span.className = 'word-cloud-word';
+        span.style.fontSize = size + 'px';
+        span.style.left = pos.left + '%';
+        span.style.top = pos.top + '%';
+        span.textContent = item.word;
+        span.setAttribute('data-tooltip', item.count + (item.count === 1 ? ' time' : ' times'));
+        span.onclick = (function (word) {
+          return function () {
+            if (navigator.clipboard && window.isSecureContext) {
+              navigator.clipboard.writeText(word);
+            } else {
+              var ta = document.createElement('textarea');
+              ta.value = word;
+              document.body.appendChild(ta);
+              ta.select();
+              document.execCommand('copy');
+              document.body.removeChild(ta);
+            }
+            if (typeof showPopup === 'function') showPopup('Copied: ' + word);
+          };
+        })(item.word);
+        cloudShape.appendChild(span);
+      });
+      cloudEl.appendChild(cloudShape);
+    }
+    container.appendChild(cloudEl);
   } else {
     var sectionEl = document.createElement('div');
     sectionEl.className = 'transcript-script-section';
@@ -361,5 +500,34 @@ function exportTranscriptsAsTxt() {
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
   showPopup('Transcripts exported as TXT');
+}
+
+// Export word cloud as CSV: word (column 1), language (column 2), count (column 3)
+function exportWordCloudAsCsv() {
+  var data = getWordCloudDataByLanguage();
+  if (!data.length) {
+    showPopup('No word cloud data to export.');
+    return;
+  }
+  function csvEscape(s) {
+    s = String(s);
+    if (/[",\n\r]/.test(s)) s = '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+  var header = 'word,language,count';
+  var rows = data.map(function (item) {
+    return csvEscape(item.word) + ',' + csvEscape(item.language) + ',' + item.count;
+  });
+  var csv = header + '\n' + rows.join('\n');
+  var blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url;
+  a.download = 'word-cloud-' + new Date().toISOString().slice(0, 19).replace(/:/g, '-') + '.csv';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+  showPopup('Word cloud exported as CSV');
 }
 
