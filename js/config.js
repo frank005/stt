@@ -296,27 +296,31 @@ function cancelSTTModal() {
 
 var RTC_TOKEN_EXPIRE = 1800; // 30 minutes
 
+/** Normalize Agora App ID / App Certificate to 32 hex chars (strip spaces/dashes). Returns null if invalid. */
+function normalizeAgoraHex(val) {
+  if (!val || typeof val !== "string") return null;
+  var s = val.trim().replace(/[\s-]/g, "");
+  if (s.length !== 32 || !/^[0-9a-fA-F]+$/.test(s)) return null;
+  return s;
+}
+
 /**
- * Generate an RTC token and put it into the given input.
- * Uses App ID and App Certificate from Connection Settings, channel from STT Settings, UID from the given UID input.
- * @param {string} tokenInputId - ID of the input to receive the token (e.g. 'pusher-token', 'puller-token')
- * @param {string} uidInputId - ID of the input that holds the UID for the token (e.g. 'pusher-uid', 'puller-uid')
+ * Generate RTC token for joining; uses Channel and User ID above (empty = 0), respects Use string UID.
  */
-async function generateRtcTokenForInput(tokenInputId, uidInputId) {
-  var appId = $("#appid").val();
-  var appCertificate = $("#app-certificate").val();
-  var channelName = $("#channel").val();
-  var uidVal = $("#" + uidInputId).val();
+async function generateJoinRtcToken() {
+  var appId = normalizeAgoraHex($("#appid").val());
+  var appCertificate = normalizeAgoraHex($("#app-certificate").val());
+  var channelName = ($("#channel").val() || "").trim();
+  var uidVal = ($("#uid").val() || "").trim();
+  var uidString = $("#uid-string").is(":checked");
+  var account = (uidVal !== "") ? (uidString ? uidVal : String(parseInt(uidVal, 10))) : "0";
+  if (uidVal !== "" && !uidString && isNaN(parseInt(uidVal, 10))) account = uidVal;
   if (!appId || !appCertificate) {
-    showPopup("Please set App ID and App Certificate in Connection Settings first");
+    showPopup("App ID and App Certificate must be 32-character hex.");
     return;
   }
   if (!channelName) {
-    showPopup("Please set Channel Name in STT Settings first");
-    return;
-  }
-  if (!uidVal || String(uidVal).trim() === "") {
-    showPopup("Please enter a UID for " + (uidInputId === "pusher-uid" ? "Pub Bot" : "Sub Bot") + " first");
+    showPopup("Set Channel Name first.");
     return;
   }
   try {
@@ -324,16 +328,69 @@ async function generateRtcTokenForInput(tokenInputId, uidInputId) {
       appId,
       appCertificate,
       channelName,
-      String(uidVal).trim(),
+      account,
       RtcRole.PUBLISHER,
       RTC_TOKEN_EXPIRE,
       RTC_TOKEN_EXPIRE
     );
-    if (token) {
-      $("#" + tokenInputId).val(token);
-      showPopup("RTC token generated (valid 30 minutes)");
+    var el = document.getElementById("join-token");
+    if (token && el) {
+      el.value = token;
+      $("#join-token").val(token);
+      showPopup("Join token generated.");
+    } else if (!token) {
+      showPopup("Invalid App ID or App Certificate (32 hex chars).");
     } else {
-      showPopup("Token generation failed");
+      showPopup("Could not find token input.");
+    }
+  } catch (err) {
+    console.error("Token generation error:", err);
+    showPopup("Token error: " + (err.message || String(err)));
+  }
+}
+
+/**
+ * Generate an RTC token and put it into the given input.
+ * Uses App ID and App Certificate from Connection Settings, channel from STT Settings, UID from the given UID input.
+ * @param {string} tokenInputId - ID of the input to receive the token (e.g. 'pusher-token', 'puller-token')
+ * @param {string} uidInputId - ID of the input that holds the UID for the token (e.g. 'pusher-uid', 'puller-uid')
+ */
+async function generateRtcTokenForInput(tokenInputId, uidInputId) {
+  var appId = normalizeAgoraHex($("#appid").val());
+  var appCertificate = normalizeAgoraHex($("#app-certificate").val());
+  var channelName = ($("#channel").val() || "").trim();
+  var uidVal = ($("#" + uidInputId).val() || "").trim();
+  if (!appId || !appCertificate) {
+    showPopup("App ID and App Certificate must be 32-character hex.");
+    return;
+  }
+  if (!channelName) {
+    showPopup("Set Channel Name first.");
+    return;
+  }
+  if (!uidVal) {
+    showPopup("Enter " + (uidInputId === "pusher-uid" ? "Pub" : "Sub") + " Bot UID first.");
+    return;
+  }
+  try {
+    var token = await RtcTokenBuilder.buildTokenWithUserAccount(
+      appId,
+      appCertificate,
+      channelName,
+      uidVal,
+      RtcRole.PUBLISHER,
+      RTC_TOKEN_EXPIRE,
+      RTC_TOKEN_EXPIRE
+    );
+    var el = document.getElementById(tokenInputId);
+    if (token && el) {
+      el.value = token;
+      $("#" + tokenInputId).val(token);
+      showPopup("Token generated.");
+    } else if (!token) {
+      showPopup("Invalid App ID or App Certificate (32 hex chars).");
+    } else {
+      showPopup("Could not find token input.");
     }
   } catch (err) {
     console.error("Token generation error:", err);
